@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="am" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lite Games - የጨዋታ መድረክ</title>
+    <meta name="description" content="Lite Games Amharic multi-game platform connecting Aviator, Fast Keno, Crazy Rocket, Multi Hot 5, JetX, and 888 Dragons with a single unified ETB wallet.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f1423',
+                        cardBg: '#182035',
+                        cardHover: '#222b45',
+                        accentBlue: '#2563eb',
+                        accentCyan: '#06b6d4',
+                        accentGreen: '#10b981',
+                        gold: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f1423;
+            color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .game-logo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="bg-darkBg min-h-screen pb-24 select-none">
+
+    <!-- Top App Header -->
+    <header class="sticky top-0 z-40 bg-[#0f1423]/95 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <button onclick="openDrawer()" aria-label="Menu" class="text-gray-400 hover:text-white text-lg transition">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-bolt text-sm"></i>
+                </div>
+                <span class="font-bold text-lg tracking-tight text-white">Lite Games</span>
+            </div>
+        </div>
+
+        <!-- Unified Balance & Deposit Pill -->
+        <div class="flex items-center space-x-2">
+            <div id="balance-pill" class="flex items-center space-x-2 bg-[#182035] border border-gray-700/60 rounded-full px-3 py-1.5 shadow-inner">
+                <i id="refresh-icon" class="fa-solid fa-rotate-right text-xs text-cyan-400 cursor-pointer hover:rotate-180 transition-transform duration-500" onclick="refreshBalance(true)"></i>
+                <span id="balance-text" class="text-xs font-semibold text-white tracking-wide">1,000.00 ETB</span>
+                <i id="eye-icon" class="fa-solid fa-eye-slash text-xs text-gray-400 cursor-pointer hover:text-white" onclick="toggleBalance()"></i>
+            </div>
+            <button onclick="openDepositModal()" class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-medium text-xs px-3.5 py-2 rounded-full shadow-md shadow-blue-600/30 flex items-center space-x-1.5 transition active:scale-95">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>ገንዘብ አሁጉ</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-md mx-auto px-3 pt-3 space-y-6">
+
+        <!-- Banner / Slider Area -->
+        <section class="relative rounded-2xl overflow-hidden shadow-xl border border-gray-800 bg-gradient-to-r from-blue-900/40 via-indigo-950/60 to-purple-950/45 p-5 min-h-[140px] flex flex-col justify-between">
+            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="flex justify-between items-start z-10">
+                <div>
+                    <span class="bg-cyan-500/20 text-cyan-300 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-cyan-500/30">ልዩ ጉርሻ</span>
+                    <h2 class="text-white font-bold text-base mt-1.5">በመጀመሪያው ሒሳብዎ ላይ እስከ 200% ሽልማት ያግኙ!</h2>
+                </div>
+            </div>
+            <div class="flex items-center justify-between mt-4 z-10">
+                <div class="flex space-x-1 text-gray-400 text-xs">
+                    <span class="text-cyan-400 font-medium">@litegamezbot</span>
+                </div>
+                <button onclick="launchGame('aviator')" class="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm border border-white/10 transition">
+                    ይጫወቱ
+                </button>
+            </div>
+        </section>
+
+        <!-- Section 1: ምርጥ አሸናፊዎች (Top Winners) -->
+        <section>
+            <div class="flex items-center justify-between mb-3 gap-2">
+                <div class="flex items-center space-x-2 shrink-0">
+                    <div class="text-blue-400 text-lg"><i class="fa-solid fa-trophy"></i></div>
+                    <h3 class="font-bold text-white text-sm">ምርጥ አሸናፊዎች</h3>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+                <span class="text-gray-400 text-[11px] font-light truncate">ቀኑ እርሶም ሊሆኑ ይችላሉ</span>
+            </div>
+
+            <!-- Horizontal Scrollable Winners Cards (Live from Unified Wallet) -->
+            <div id="winners-strip" class="flex space-x-3 overflow-x-auto no-scrollbar pb-2">
+                <!-- Populated dynamically via /api/wallet/winners -->
+            </div>
+        </section>
+
+        <!-- Section 2: የተመረጡ ጨዋታዎች (All 6 Built Games) -->
+        <section>
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="text-cyan-400 text-lg"><i class="fa-solid fa-gamepad"></i></div>
+                    <h3 class="font-bold text-white text-sm">የተመረጡ ጨዋታዎች</h3>
+                </div>
+                <button id="fav-filter-btn" onclick="toggleFavoritesFilter()" class="text-[11px] px-2.5 py-1 rounded-full bg-[#182035] border border-gray-700/70 text-gray-300 hover:text-cyan-300 transition">
+                    <i class="fa-solid fa-star text-amber-400 mr-1"></i><span>ሁሉም (6)</span>
+                </button>
+            </div>
+
+            <!-- 6 Built Games Grid (Click any box -> launches that exact game directly!) -->
+            <div id="games-grid" class="grid grid-cols-2 gap-3">
+
+                <!-- 1. AVIATOR BOX (Custom Logo Slot: #logo-aviator) -->
+                <div data-game="aviator" onclick="launchGame('aviator')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-red-950 via-red-900 to-orange-800 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/aviator.png" alt="Aviator" /> or set CUSTOM_LOGOS.aviator -->
+                        <div id="logo-aviator" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <i class="fa-solid fa-plane-departure text-4xl text-red-400 transform group-hover:scale-110 transition duration-300"></i>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'aviator', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-red-300 font-bold uppercase tracking-wider">SPRIBE</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">Aviator</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ፈጣን አሸናፊ</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+                <!-- 2. FAST KENO BOX (Custom Logo Slot: #logo-keno) -->
+                <div data-game="keno" onclick="launchGame('keno')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-emerald-950 via-teal-900 to-green-950 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/keno.png" alt="Fast Keno" /> or set CUSTOM_LOGOS.keno -->
+                        <div id="logo-keno" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <div class="w-14 h-14 rounded-full bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-white font-extrabold text-xl shadow-lg transform group-hover:scale-110 transition duration-300">
+                                80
+                            </div>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'keno', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-emerald-300 font-bold uppercase tracking-wider">KENO 80</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">Fast Keno</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ቁጥር መምረጫ</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+                <!-- 3. CRAZY ROCKET BOX (Custom Logo Slot: #logo-rocket) -->
+                <div data-game="rocket" onclick="launchGame('rocket')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-blue-950 via-slate-900 to-indigo-950 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/rocket.png" alt="Crazy Rocket" /> or set CUSTOM_LOGOS.rocket -->
+                        <div id="logo-rocket" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <i class="fa-solid fa-rocket text-4xl text-blue-400 transform group-hover:-translate-y-2 transition duration-300"></i>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'rocket', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-cyan-300 font-bold uppercase tracking-wider">CRASH</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">Crazy Rocket</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ጠፈር ጉዞ</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+                <!-- 4. MULTI HOT 5 BOX (Custom Logo Slot: #logo-multihot5) -->
+                <div data-game="multihot5" onclick="launchGame('multihot5')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-amber-950 via-orange-900 to-red-950 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/multihot5.png" alt="Multi Hot 5" /> or set CUSTOM_LOGOS.multihot5 -->
+                        <div id="logo-multihot5" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <i class="fa-solid fa-fire text-4xl text-amber-400 transform group-hover:scale-110 transition duration-300"></i>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'multihot5', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-amber-300 font-bold uppercase tracking-wider">HOT 5</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">Multi Hot 5</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ፍራፍሬ ስሎት</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+                <!-- 5. JETX BOX (Custom Logo Slot: #logo-jetx) -->
+                <div data-game="jetx" onclick="launchGame('jetx')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-indigo-950 via-purple-900 to-blue-950 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/jetx.png" alt="JetX" /> or set CUSTOM_LOGOS.jetx -->
+                        <div id="logo-jetx" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <i class="fa-solid fa-jet-fighter-up text-4xl text-cyan-300 transform group-hover:scale-110 transition duration-300"></i>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'jetx', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-indigo-300 font-bold uppercase tracking-wider">SMARTSOFT</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">JetX</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ጄት በረራ</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+                <!-- 6. 888 DRAGONS BOX (Custom Logo Slot: #logo-dragons) -->
+                <div data-game="dragons" onclick="launchGame('dragons')" class="game-card bg-cardBg border border-gray-800/80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer hover:border-cyan-500/60 transition relative flex flex-col justify-between">
+                    <div class="relative h-32 bg-gradient-to-tr from-fuchsia-950 via-purple-950 to-amber-900 flex items-center justify-center overflow-hidden p-2">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+                        <!-- LOGO SLOT: Replace inner markup with <img src="/logos/dragons.png" alt="888 Dragons" /> or set CUSTOM_LOGOS.dragons -->
+                        <div id="logo-dragons" class="game-logo-slot w-20 h-20 flex items-center justify-center z-10">
+                            <i class="fa-solid fa-dragon text-4xl text-yellow-400 transform group-hover:scale-110 transition duration-300"></i>
+                        </div>
+                        <button onclick="toggleFavorite(event, 'dragons', this)" class="fav-btn absolute top-2 left-2 z-20 w-7 h-7 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-blue-400 hover:text-white transition">
+                            <i class="fa-solid fa-star text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-1 right-2 z-10 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-yellow-300 font-bold uppercase tracking-wider">PRAGMATIC</div>
+                    </div>
+                    <div class="p-3 bg-[#182035] flex items-center justify-between">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate">888 Dragons</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ድራጎን ስሎት</div>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-semibold"><i class="fa-solid fa-play"></i></span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Fixed) -->
+    <nav aria-label="Bottom Navigation" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-[#141b2e]/95 backdrop-blur-lg border-t border-gray-800 px-2 py-2 flex items-center justify-around z-40 shadow-2xl">
+        <button onclick="openLeaderboardModal()" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-cyan-400 transition w-16">
+            <div class="text-base"><i class="fa-solid fa-chart-column"></i></div>
+            <span class="text-[10px] font-medium">የመወዳደሪያ ሰሌዳ</span>
+        </button>
+
+        <button onclick="openRewardsModal()" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-cyan-400 transition w-16">
+            <div class="text-base"><i class="fa-solid fa-gift"></i></div>
+            <span class="text-[10px] font-medium">ሽልማት</span>
+        </button>
+
+        <button onclick="openSupportModal()" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-cyan-400 transition w-16">
+            <div class="text-base"><i class="fa-solid fa-headset"></i></div>
+            <span class="text-[10px] font-medium">ድጋፍ</span>
+        </button>
+
+        <button onclick="openProfileModal()" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-cyan-400 transition w-16">
+            <div class="text-base"><i class="fa-solid fa-user-gear"></i></div>
+            <span class="text-[10px] font-medium">ፕሮፋይል</span>
+        </button>
+
+        <!-- Prominent Floating Deposit Button -->
+        <button onclick="openDepositModal()" aria-label="Deposit" class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white p-3.5 rounded-full shadow-lg shadow-cyan-500/30 flex items-center justify-center transform active:scale-95 transition -mt-6 border-4 border-[#0f1423]">
+            <i class="fa-solid fa-plus text-sm"></i>
+        </button>
+    </nav>
+
+    <!-- Slide-out Navigation Drawer -->
+    <div id="nav-drawer" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden">
+        <div class="w-72 max-w-[82vw] h-full bg-[#141b2e] border-r border-gray-800 p-4 flex flex-col justify-between shadow-2xl">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                        </div>
+                        <span class="font-bold text-white text-base">Lite Games</span>
+                    </div>
+                    <button onclick="closeDrawer()" class="text-gray-400 hover:text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="mt-4 space-y-1.5">
+                    <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-2 mb-2">ሁሉም ጨዋታዎች</div>
+                    <button onclick="closeDrawer(); launchGame('aviator')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-plane-departure text-red-400 w-4"></i><span>Aviator</span>
+                    </button>
+                    <button onclick="closeDrawer(); launchGame('keno')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-table-cells text-emerald-400 w-4"></i><span>Fast Keno</span>
+                    </button>
+                    <button onclick="closeDrawer(); launchGame('rocket')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-rocket text-blue-400 w-4"></i><span>Crazy Rocket</span>
+                    </button>
+                    <button onclick="closeDrawer(); launchGame('multihot5')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-fire text-amber-400 w-4"></i><span>Multi Hot 5</span>
+                    </button>
+                    <button onclick="closeDrawer(); launchGame('jetx')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-jet-fighter-up text-cyan-400 w-4"></i><span>JetX</span>
+                    </button>
+                    <button onclick="closeDrawer(); launchGame('dragons')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-[#1e2742] text-left text-xs font-medium text-gray-200 transition">
+                        <i class="fa-solid fa-dragon text-yellow-400 w-4"></i><span>888 Dragons</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-800 text-[11px] text-gray-400 flex items-center justify-between">
+                <span>ID: <strong id="drawer-player-id" class="text-cyan-400">...</strong></span>
+                <button onclick="closeDrawer(); openProfileModal()" class="text-cyan-400 hover:underline">ፕሮፋይል</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direct Game Player Full-Screen Frame Overlay -->
+    <div id="game-player-overlay" class="fixed inset-0 z-50 bg-[#0a0e1a] hidden flex-col">
+        <div class="h-12 shrink-0 bg-[#0f1423] border-b border-gray-800 px-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <button onclick="closeGameFrame()" class="flex items-center space-x-1.5 bg-[#182035] hover:bg-[#222b45] border border-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition">
+                    <i class="fa-solid fa-arrow-left text-cyan-400"></i>
+                    <span>ወደ ዋናው ገጽ</span>
+                </button>
+                <span id="active-game-title" class="text-xs font-bold text-white tracking-wide truncate">Aviator</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-1.5 bg-[#182035] border border-gray-700/70 rounded-full px-2.5 py-1">
+                    <span id="frame-balance-text" class="text-xs font-semibold text-cyan-300">1,000.00 ETB</span>
+                </div>
+                <button onclick="openDepositModal()" class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                </button>
+            </div>
+        </div>
+        <iframe id="game-iframe" src="about:blank" class="w-full flex-1 border-0 bg-[#0a0e1a]" allow="autoplay; fullscreen"></iframe>
+    </div>
+
+    <!-- Custom Modal for Deposit / Leaderboard / Rewards / Profile / Support -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#182035] border border-gray-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div id="modal-content" class="text-center"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CUSTOMIZABLE GAME LOGOS CONFIG
+        // Add image URLs or paths like '/logos/aviator.png' below to swap
+        // any box logo cleanly without touching the layout code!
+        // ============================================================
+        const CUSTOM_LOGOS = {
+            aviator: '',    // e.g. '/logos/aviator.png'
+            keno: '',       // e.g. '/logos/keno.png'
+            rocket: '',     // e.g. '/logos/rocket.png'
+            multihot5: '',  // e.g. '/logos/multihot5.png'
+            jetx: '',       // e.g. '/logos/jetx.png'
+            dragons: ''     // e.g. '/logos/dragons.png'
+        };
+
+        const GAMES_CATALOG = {
+            aviator:   { title: 'Aviator',      path: '/games/aviator.html',   tag: 'SPRIBE' },
+            keno:      { title: 'Fast Keno',    path: '/games/keno.html',      tag: 'KENO 80' },
+            rocket:    { title: 'Crazy Rocket', path: '/games/rocket.html',    tag: 'CRASH' },
+            multihot5: { title: 'Multi Hot 5',  path: '/games/multihot5.html', tag: 'HOT 5' },
+            jetx:      { title: 'JetX',         path: '/games/jetx.html',      tag: 'SMARTSOFT' },
+            dragons:   { title: '888 Dragons',  path: '/games/dragons.html',   tag: 'PRAGMATIC' }
+        };
+
+        // Unified Player Identity shared across Lite Games + all 6 games
+        function getUnifiedPlayerId() {
+            let pid = localStorage.getItem('litegames_player_id')
+                || localStorage.getItem('aviator_player_id')
+                || localStorage.getItem('shamo_keno_player_id')
+                || localStorage.getItem('shamo_rocket_player_id')
+                || localStorage.getItem('mh5_player_id')
+                || localStorage.getItem('jetx_player_id')
+                || localStorage.getItem('dragons_player_id');
+            if (!pid) {
+                pid = '09' + Math.floor(10 + Math.random() * 89) + 'lg' + Math.floor(1000 + Math.random() * 8999);
+            }
+            localStorage.setItem('litegames_player_id', pid);
+            return pid;
+        }
+
+        const PLAYER_ID = getUnifiedPlayerId();
+        let playerDisplayName = localStorage.getItem('litegames_player_name') || '';
+        let currentBalance = 1000.00;
+        let balanceVisible = true;
+        let activeGameSlug = null;
+        let favoritesOnly = false;
+        let favoriteSlugs = JSON.parse(localStorage.getItem('litegames_favorites') || '[]');
+
+        function formatMoney(num) {
+            return Number(num || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' ETB';
+        }
+
+        function updateBalanceUI() {
+            const text = balanceVisible ? formatMoney(currentBalance) : '••••••';
+            const el = document.getElementById('balance-text');
+            const frameEl = document.getElementById('frame-balance-text');
+            if (el) el.innerText = text;
+            if (frameEl) frameEl.innerText = formatMoney(currentBalance);
+        }
+
+        async function refreshBalance(showToast = false) {
+            const pill = document.getElementById('balance-pill');
+            if (pill) pill.classList.add('animate-pulse');
+            try {
+                const res = await fetch(`/api/wallet/state?playerId=${encodeURIComponent(PLAYER_ID)}&displayName=${encodeURIComponent(playerDisplayName)}`);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentBalance = Number(data.balance || 0);
+                    updateBalanceUI();
+                    if (showToast) showNotification('ሒሳብዎ ተዘምኗል!');
+                }
+            } catch (_) {
+                if (showToast) showNotification('ግንኙነት በመሞከር ላይ...');
+            } finally {
+                if (pill) setTimeout(() => pill.classList.remove('animate-pulse'), 350);
+            }
+        }
+
+        async function loadWinners() {
+            try {
+                const res = await fetch('/api/wallet/winners');
+                const data = await res.json();
+                const list = (data && data.topWinners) ? data.topWinners : [];
+                const strip = document.getElementById('winners-strip');
+                if (!strip) return;
+
+                const colorMap = {
+                    amber:   { badge: 'bg-amber-500/30 text-amber-300',   val: 'text-amber-400' },
+                    emerald: { badge: 'bg-emerald-500/30 text-emerald-300', val: 'text-emerald-400' },
+                    indigo:  { badge: 'bg-indigo-500/30 text-indigo-300', val: 'text-indigo-300' },
+                    cyan:    { badge: 'bg-cyan-500/30 text-cyan-300',     val: 'text-cyan-400' },
+                    blue:    { badge: 'bg-blue-600/30 text-blue-300',     val: 'text-cyan-400' }
+                };
+
+                strip.innerHTML = list.map((w) => {
+                    const c = colorMap[w.badgeColor] || colorMap.blue;
+                    return `
+                        <div class="min-w-[132px] bg-cardBg border border-gray-800/80 rounded-xl p-3 flex flex-col justify-between shadow-lg relative overflow-hidden hover:border-cyan-500/50 transition">
+                            <div class="absolute top-0 right-0 ${c.badge} font-bold text-[10px] px-2 py-0.5 rounded-bl-lg">${w.badge || 'WIN'}</div>
+                            <div class="text-[11px] text-gray-400 font-medium truncate mt-1">${w.game}</div>
+                            <div class="my-2.5">
+                                <div class="${c.val} font-extrabold text-sm tracking-tight">${Math.round(w.win).toLocaleString()} <span class="text-[10px] font-normal text-gray-300">ETB</span></div>
+                            </div>
+                            <div class="text-[10px] text-gray-400 flex items-center space-x-1">
+                                <i class="fa-solid fa-user text-[9px] text-gray-500"></i>
+                                <span class="truncate">${w.user}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (_) {}
+        }
+
+        function applyCustomLogos() {
+            Object.entries(CUSTOM_LOGOS).forEach(([slug, src]) => {
+                if (!src) return;
+                const slot = document.getElementById(`logo-${slug}`);
+                if (slot) {
+                    slot.innerHTML = `<img src="${src}" alt="${slug} logo" />`;
+                }
+            });
+        }
+
+        function syncFavoriteStars() {
+            document.querySelectorAll('.game-card').forEach((card) => {
+                const slug = card.dataset.game;
+                const isFav = favoriteSlugs.includes(slug);
+                const btnIcon = card.querySelector('.fav-btn i');
+                if (btnIcon) {
+                    btnIcon.classList.toggle('text-amber-400', isFav);
+                    btnIcon.classList.toggle('text-blue-400', !isFav);
+                }
+                if (favoritesOnly) {
+                    card.classList.toggle('hidden', !isFav);
+                } else {
+                    card.classList.remove('hidden');
+                }
+            });
+        }
+
+        function toggleFavorite(event, slug) {
+            event.stopPropagation();
+            if (favoriteSlugs.includes(slug)) {
+                favoriteSlugs = favoriteSlugs.filter((s) => s !== slug);
+                showNotification('ከተወዳጆች ተወግዷል!');
+            } else {
+                favoriteSlugs.push(slug);
+                showNotification('ወደ ተወዳጆች ተጨምሯል!');
+            }
+            localStorage.setItem('litegames_favorites', JSON.stringify(favoriteSlugs));
+            syncFavoriteStars();
+        }
+
+        function toggleFavoritesFilter() {
+            favoritesOnly = !favoritesOnly;
+            const btn = document.getElementById('fav-filter-btn');
+            if (btn) {
+                btn.querySelector('span').innerText = favoritesOnly ? `ተወዳጆች (${favoriteSlugs.length})` : 'ሁሉም (6)';
+                btn.classList.toggle('border-amber-500/60', favoritesOnly);
+            }
+            syncFavoriteStars();
+        }
+
+        function toggleBalance() {
+            balanceVisible = !balanceVisible;
+            const eyeIcon = document.getElementById('eye-icon');
+            eyeIcon.className = balanceVisible
+                ? 'fa-solid fa-eye-slash text-xs text-gray-400 cursor-pointer hover:text-white'
+                : 'fa-solid fa-eye text-xs text-cyan-400 cursor-pointer hover:text-white';
+            updateBalanceUI();
+        }
+
+        // Direct launch into the exact selected game!
+        function launchGame(slug) {
+            const game = GAMES_CATALOG[slug];
+            if (!game) return;
+            activeGameSlug = slug;
+
+            const overlay = document.getElementById('game-player-overlay');
+            const titleEl = document.getElementById('active-game-title');
+            const iframe = document.getElementById('game-iframe');
+
+            titleEl.innerText = game.title;
+            updateBalanceUI();
+            iframe.src = `${game.path}?playerId=${encodeURIComponent(PLAYER_ID)}&displayName=${encodeURIComponent(playerDisplayName)}&embedded=1`;
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+
+        function closeGameFrame() {
+            const overlay = document.getElementById('game-player-overlay');
+            const iframe = document.getElementById('game-iframe');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+            iframe.src = 'about:blank';
+            activeGameSlug = null;
+            refreshBalance(false);
+            loadWinners();
+        }
+
+        function openDrawer() {
+            document.getElementById('drawer-player-id').innerText = PLAYER_ID;
+            document.getElementById('nav-drawer').classList.remove('hidden');
+        }
+        function closeDrawer() {
+            document.getElementById('nav-drawer').classList.add('hidden');
+        }
+
+        function openDepositModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="w-12 h-12 bg-cyan-500/20 text-cyan-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">ገንዘብ ያስገቡ</h3>
+                <p class="text-gray-400 text-xs mb-4">በቴሌብር (Telebirr) ወይም ባንክ አካውንት ሒሳብዎን ወዲያውኑ ይሙሉ</p>
+                <div class="grid grid-cols-4 gap-2 mb-3">
+                    <button onclick="document.getElementById('dep-amount').value=100" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">100</button>
+                    <button onclick="document.getElementById('dep-amount').value=500" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">500</button>
+                    <button onclick="document.getElementById('dep-amount').value=1000" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">1000</button>
+                    <button onclick="document.getElementById('dep-amount').value=5000" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">5000</button>
+                </div>
+                <div class="space-y-3 text-left">
+                    <select id="dep-method" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+                        <option value="Telebirr">Telebirr (ቴሌብር)</option>
+                        <option value="CBE Birr">CBE Birr (ሲቢኢ ብር)</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                    </select>
+                    <input id="dep-amount" type="number" min="1" max="100000" value="500" placeholder="መጠን በ ETB (ምሳሌ: 500)" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500">
+                    <button onclick="submitDeposit()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-cyan-500/30 transition text-sm">
+                        ክፍያ ይፈጽሙ
+                    </button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        async function submitDeposit() {
+            const amount = Number(document.getElementById('dep-amount')?.value || 0);
+            const method = document.getElementById('dep-method')?.value || 'Telebirr';
+            if (!amount || amount < 1) {
+                showNotification('ትክክለኛ መጠን ያስገቡ!');
+                return;
+            }
+            try {
+                const res = await fetch('/api/wallet/deposit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerId: PLAYER_ID, amount, method })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentBalance = Number(data.balance);
+                    updateBalanceUI();
+                    closeModal();
+                    showNotification(`${data.added} ETB ወደ ሒሳብዎ ገብቷል!`);
+                } else {
+                    showNotification(data.message || 'ክፍያው አልተሳካም');
+                }
+            } catch (_) {
+                showNotification('የኔትወርክ ችግር አጋጥሟል');
+            }
+        }
+
+        async function openLeaderboardModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = '<div class="py-8 text-xs text-gray-400">የመወዳደሪያ ሰሌዳ በመጫን ላይ...</div>';
+            modal.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/wallet/winners');
+                const data = await res.json();
+                const rows = (data.leaderboard || []).slice(0, 10);
+                content.innerHTML = `
+                    <div class="w-11 h-11 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-2 text-lg">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base mb-1">የመወዳደሪያ ሰሌዳ</h3>
+                    <p class="text-gray-400 text-[11px] mb-3">በሁሉም 6 ጨዋታዎች ከፍተኛ አሸናፊዎች</p>
+                    <div class="space-y-1.5 text-left max-h-64 overflow-y-auto pr-1">
+                        ${rows.map((r) => `
+                            <div class="flex items-center justify-between bg-[#0f1423] border border-gray-800 rounded-xl px-3 py-2 text-xs">
+                                <div class="flex items-center space-x-2 min-w-0">
+                                    <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-[10px] flex items-center justify-center shrink-0">${r.rank}</span>
+                                    <div class="truncate">
+                                        <div class="text-white font-semibold truncate">${r.user}</div>
+                                        <div class="text-[10px] text-gray-500">${r.game || 'All Games'}</div>
+                                    </div>
+                                </div>
+                                <div class="text-emerald-400 font-bold shrink-0">${Math.round(r.totalWon).toLocaleString()} ETB</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (_) {
+                content.innerHTML = '<div class="py-6 text-xs text-red-400">መረጃ ማምጣት አልተቻለም</div>';
+            }
+        }
+
+        function openRewardsModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">ነጻ የጉርሻ ሽልማት</h3>
+                <p class="text-gray-400 text-xs mb-4">በሁሉም ጨዋታዎች የሚሰራ የ +100.00 ETB ነጻ ቦነስ ያግኙ</p>
+                <button onclick="claimRewardBonus()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-2.5 rounded-xl shadow-lg transition text-sm">
+                    +100.00 ETB ሽልማት ውሰድ
+                </button>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        async function claimRewardBonus() {
+            try {
+                const res = await fetch('/api/wallet/reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerId: PLAYER_ID })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentBalance = Number(data.balance);
+                    updateBalanceUI();
+                    closeModal();
+                    showNotification(`+${data.added} ETB ጉርሻ ተሰጥቶዎታል!`);
+                } else {
+                    showNotification(data.message || 'ሽልማቱን አስቀድመው ወስደዋል');
+                }
+            } catch (_) {
+                showNotification('የኔትወርክ ችግር አጋጥሟል');
+            }
+        }
+
+        function openSupportModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="w-12 h-12 bg-cyan-500/20 text-cyan-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">የደንበኞች ድጋፍ</h3>
+                <p class="text-gray-400 text-xs mb-4">24/7 እገዛ — የገንዘብ ማስገቢያ ወይም ጨዋታ ጋር የተያያዘ ጥያቄ ካለዎት ያግኙን።</p>
+                <div class="space-y-2 text-left text-xs">
+                    <div class="bg-[#0f1423] border border-gray-800 rounded-xl p-3 flex items-center justify-between">
+                        <span class="text-gray-400">Telegram Bot</span>
+                        <span class="text-cyan-400 font-semibold">@litegamezbot</span>
+                    </div>
+                    <div class="bg-[#0f1423] border border-gray-800 rounded-xl p-3 flex items-center justify-between">
+                        <span class="text-gray-400">Unified Wallet ID</span>
+                        <span class="text-white font-mono">${PLAYER_ID}</span>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        async function openProfileModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = '<div class="py-8 text-xs text-gray-400">ፕሮፋይል በመጫን ላይ...</div>';
+            modal.classList.remove('hidden');
+            try {
+                const res = await fetch(`/api/wallet/state?playerId=${encodeURIComponent(PLAYER_ID)}`);
+                const p = await res.json();
+                content.innerHTML = `
+                    <div class="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">የተጫዋች ፕሮፋይል</h3>
+                    <div class="text-[11px] text-cyan-400 mb-3 font-mono">${p.playerId}</div>
+                    <div class="flex space-x-2 mb-3">
+                        <input id="profile-name-input" type="text" value="${playerDisplayName || p.displayName || ''}" placeholder="የተጫዋች ስም" class="flex-1 bg-[#0f1423] border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                        <button onclick="saveProfileName()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-3 py-2 rounded-xl">አስቀምጥ</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                        <div class="bg-[#0f1423] border border-gray-800 rounded-xl p-2">
+                            <div class="text-[10px] text-gray-400">ሒሳብ</div>
+                            <div class="text-xs font-bold text-cyan-400">${Math.round(p.balance)} ETB</div>
+                        </div>
+                        <div class="bg-[#0f1423] border border-gray-800 rounded-xl p-2">
+                            <div class="text-[10px] text-gray-400">ጠቅላላ ውርርድ</div>
+                            <div class="text-xs font-bold text-white">${Math.round(p.totalWagered)} ETB</div>
+                        </div>
+                        <div class="bg-[#0f1423] border border-gray-800 rounded-xl p-2">
+                            <div class="text-[10px] text-gray-400">ጠቅላላ ድል</div>
+                            <div class="text-xs font-bold text-emerald-400">${Math.round(p.totalWon)} ETB</div>
+                        </div>
+                    </div>
+                    <div class="text-left text-[11px] text-gray-400 mb-1.5 font-semibold">የቅርብ ጊዜ እንቅስቃሴዎች</div>
+                    <div class="space-y-1 max-h-40 overflow-y-auto text-left">
+                        ${(p.transactions || []).slice(0, 8).map((tx) => `
+                            <div class="bg-[#0f1423] border border-gray-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-[11px]">
+                                <div>
+                                    <span class="text-white font-medium">${tx.game}</span>
+                                    <span class="text-gray-500 ml-1">${tx.type}</span>
+                                </div>
+                                <span class="${tx.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-semibold">${tx.amount >= 0 ? '+' : ''}${Number(tx.amount).toFixed(2)} ETB</span>
+                            </div>
+                        `).join('') || '<div class="text-gray-500 text-xs text-center py-2">እስካሁን እንቅስቃሴ የለም</div>'}
+                    </div>
+                `;
+            } catch (_) {
+                content.innerHTML = '<div class="py-6 text-xs text-red-400">ፕሮፋይል መጫን አልተቻለም</div>';
+            }
+        }
+
+        async function saveProfileName() {
+            const val = document.getElementById('profile-name-input')?.value?.trim() || '';
+            playerDisplayName = val;
+            localStorage.setItem('litegames_player_name', val);
+            await fetch('/api/wallet/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId: PLAYER_ID, displayName: val })
+            });
+            showNotification('ስምዎ ተቀምጧል!');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function showNotification(message) {
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'fixed top-16 left-1/2 transform -translate-x-1/2 bg-[#182035] border border-cyan-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl z-[60] text-xs flex items-center space-x-2';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-cyan-400"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => toast.remove(), 300);
+            }, 2400);
+        }
+
+        // Sync balance automatically when active game iframe posts update or periodically while playing
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'LITEGAMES_SYNC_WALLET') {
+                refreshBalance(false);
+            }
+        });
+
+        setInterval(() => {
+            if (activeGameSlug) {
+                refreshBalance(false);
+            }
+        }, 3000);
+
+        setInterval(loadWinners, 12000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyCustomLogos();
+            syncFavoriteStars();
+            refreshBalance(false);
+            loadWinners();
+        });
+    </script>
+</body>
+</html>

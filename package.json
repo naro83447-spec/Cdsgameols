@@ -1,0 +1,20 @@
+{
+  "name": "lite-games-unified-platform",
+  "version": "1.0.0",
+  "description": "Lite Games Amharic platform uniting Aviator, Fast Keno, Crazy Rocket, Multi Hot 5, JetX, and 888 Dragons with one shared ETB wallet.",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js",
+    "start:bot": "node bot.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.4",
+    "firebase-admin": "^13.0.2"
+  }
+}

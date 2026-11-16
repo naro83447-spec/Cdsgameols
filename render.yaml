@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: lite-games-platform
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+
+  - type: worker
+    name: lite-games-telegram-bot
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm run start:bot
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: MINI_APP_URL
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
