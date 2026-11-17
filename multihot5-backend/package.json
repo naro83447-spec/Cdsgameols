@@ -1,0 +1,14 @@
+{
+  "name": "multi-hot-5-backend",
+  "version": "1.0.0",
+  "description": "Server-authoritative Multi Hot 5 (SmartSoft style) 3x3 slot engine with Multiplier Reel and X2 Card Gamble",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
