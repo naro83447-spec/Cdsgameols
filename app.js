@@ -81,6 +81,12 @@ function startPlatformServer(port = Number(process.env.PORT || 3000)) {
     res.sendFile(rootIndex);
   });
 
+  app.use((err, _req, res, _next) => {
+    console.error('[api-error]', err && err.message ? err.message : err);
+    const status = Number(err && err.status) || 500;
+    res.status(status).json({ status: 'error', message: status < 500 ? err.message : 'Internal server error.' });
+  });
+
   httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Lite Games Unified Platform running on port ${port}`);
   });
