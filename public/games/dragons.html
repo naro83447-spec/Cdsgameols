@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- LITEGAMES_PLAYER_SYNC -->
+<script>
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('playerId') || localStorage.getItem('litegames_player_id');
+    if (pid) {
+      ['litegames_player_id','aviator_player_id','shamo_keno_player_id','shamo_rocket_player_id','mh5_player_id','jetx_player_id','dragons_player_id'].forEach(function(k) {
+        localStorage.setItem(k, pid);
+      });
+    }
+    var pname = params.get('displayName') || localStorage.getItem('litegames_player_name');
+    if (pname) {
+      ['litegames_player_name','shamo_keno_name','shamo_rocket_name','jetx_display_name'].forEach(function(k) {
+        localStorage.setItem(k, pname);
+      });
+    }
+    if (window.parent && window.parent !== window) {
+      var origFetch = window.fetch;
+      window.fetch = function() {
+        var reqUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
+        return origFetch.apply(this, arguments).then(function(res) {
+          try {
+            var u = reqUrl;
+            if (u.indexOf('/api/') !== -1) {
+              setTimeout(function() {
+                window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, '*');
+              }, 120);
+            }
+          } catch(_) {}
+          return res;
+        });
+      };
+    } else {
+      window.addEventListener('DOMContentLoaded', function() {
+        var btn = document.createElement('a');
+        btn.href = '/';
+        btn.innerHTML = '&#8592; Lite Games';
+        btn.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
+        document.body.appendChild(btn);
+      });
+    }
+  } catch (e) {}
+})();
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>888 Dragons - Pragmatic Play</title>
+    <meta name="description" content="888 Dragons 3-reel Pragmatic-style slot game powered by a Provably Fair SHA-512 backend (96.84% RTP).">
+    <meta property="og:title" content="888 Dragons - Pragmatic Play">
+    <meta property="og:description" content="888 Dragons 3-reel Pragmatic-style slot game powered by a Provably Fair SHA-512 backend (96.84% RTP).">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            background-color: #0c0814;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 440px;
+            height: 100vh;
+            max-height: 820px;
+            background: linear-gradient(135deg, #2c0b38 0%, #150522 100%);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #b8860b;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        @media (min-width: 441px) {
+            .game-container {
+                border-radius: 20px;
+            }
+        }
+
+        /* Top Logo & Settings */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.45);
+            border-bottom: 1px solid #b8860b;
+        }
+        .logo-area {
+            font-size: 22px;
+            font-weight: 900;
+            font-style: italic;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px #ff0000, 0 0 10px #ffcc00;
+            letter-spacing: 1px;
+        }
+        .logo-area span {
+            color: #ff3333;
+            font-size: 16px;
+        }
+        .top-icons {
+            display: flex;
+            gap: 8px;
+        }
+        .icon-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #b8860b;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .icon-btn:hover {
+            background: rgba(255,204,0,0.22);
+        }
+
+        /* Paytable / Info banner */
+        .paytable-banner {
+            background: rgba(20, 5, 30, 0.92);
+            border: 2px solid #b8860b;
+            margin: 8px 12px;
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: inset 0 0 10px rgba(184,134,11,0.4);
+        }
+        .pay-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            background: rgba(255,255,255,0.06);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #ffe89e;
+        }
+        .pay-row .sym {
+            font-size: 16px;
+        }
+
+        /* Slot Reels Frame */
+        .slot-frame-container {
+            flex: 1;
+            margin: 4px 12px;
+            background: linear-gradient(180deg, #ffcc00 0%, #ff6600 50%, #ffcc00 100%);
+            border: 4px solid #b8860b;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(255,204,0,0.6);
+            overflow: hidden;
+        }
+        .reels-grid {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: #500;
+            padding: 2px;
+        }
+        .reel-column {
+            background: linear-gradient(180deg, #ffe082 0%, #ffb300 50%, #ffe082 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            overflow: hidden;
+            position: relative;
+            border-right: 1px solid rgba(184,134,11,0.5);
+        }
+        .reel-column:last-child {
+            border-right: none;
+        }
+        .symbol-cell {
+            font-size: 46px;
+            height: 33.33%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+            transition: transform 0.14s ease, filter 0.14s ease;
+        }
+        .reel-column.spinning .symbol-cell {
+            filter: blur(1px) drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+            transform: scale(0.92);
+        }
+        .symbol-cell.win-hit {
+            animation: dragonPulse 0.45s ease-in-out infinite alternate;
+        }
+        @keyframes dragonPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 8px #ff0000); }
+            100% { transform: scale(1.18); filter: drop-shadow(0 0 18px #fff200); }
+        }
+
+        /* Payline Line in the middle */
+        .payline-middle {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 0, 0, 0.72);
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 0 6px #ff0000;
+            transition: height 0.2s, box-shadow 0.2s;
+        }
+        .payline-middle.winning {
+            height: 4px;
+            background: #ff1e1e;
+            box-shadow: 0 0 14px #ffe600, 0 0 8px #ff0000;
+        }
+        .msg-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(12, 4, 20, 0.92);
+            border: 2px solid #ffcc00;
+            padding: 12px 22px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: 900;
+            color: #ffcc00;
+            text-align: center;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 0 24px rgba(255,204,0,0.7);
+            white-space: nowrap;
+        }
+        .msg-overlay small {
+            display: block;
+            font-size: 11px;
+            color: #fff;
+            margin-top: 2px;
+            font-weight: 700;
+        }
+
+        /* Bottom Controls Bar */
+        .bottom-control-bar {
+            background: rgba(15, 5, 25, 0.95);
+            border-top: 2px solid #b8860b;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .credit-bet-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 92px;
+        }
+        .info-label {
+            font-size: 10px;
+            color: #b8860b;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .info-value {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffcc00;
+        }
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .spin-btn-wrapper {
+            position: relative;
+            width: 66px;
+            height: 66px;
+            background: radial-gradient(circle, #ffcc00 0%, #ff6600 100%);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 14px rgba(255,204,0,0.85);
+            transition: transform 0.1s;
+        }
+        .spin-btn-wrapper:active {
+            transform: scale(0.92);
+        }
+        .spin-btn-wrapper.spinning {
+            opacity: 0.85;
+        }
+        .spin-arrows {
+            font-size: 28px;
+            color: #fff;
+            font-weight: bold;
+            transition: transform 0.3s linear;
+        }
+        .spin-btn-wrapper.spinning .spin-arrows {
+            animation: spinIcon 0.55s linear infinite;
+        }
+        @keyframes spinIcon {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .sub-control-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #b8860b;
+            color: #fff;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .sub-control-btn.auto-active {
+            background: #ff3333;
+            border-color: #ffcc00;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255,51,51,0.7);
+        }
+
+        /* Modal Dialogs */
+        .modal-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.82);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #22082f;
+            border: 2px solid #b8860b;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 350px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-align: center;
+            border-bottom: 1px solid #b8860b;
+            padding-bottom: 6px;
+        }
+        .modal-body-content {
+            font-size: 12px;
+            line-height: 1.5;
+            color: #ddd;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .modal-close-btn {
+            background: #ffcc00;
+            color: #12051c;
+            border: none;
+            padding: 9px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(184,134,11,0.25);
+        }
+        .toggle-pill {
+            padding: 4px 12px;
+            border-radius: 999px;
+            border: 1px solid #b8860b;
+            background: #140520;
+            color: #ccc;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .toggle-pill.on {
+            background: #00e676;
+            color: #09130c;
+            border-color: #00e676;
+        }
+        .bet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .bet-chip-btn {
+            padding: 9px 6px;
+            background: #350d49;
+            border: 1px solid #b8860b;
+            color: #fff;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .bet-chip-btn.selected {
+            background: #ffcc00;
+            color: #140520;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Top Header -->
+    <div class="top-header">
+        <div class="logo-area">888 <span>DRAGONS</span></div>
+        <div class="top-icons">
+            <button class="icon-btn" onclick="openHistoryModal()" title="Spin History">📜</button>
+            <button class="icon-btn" onclick="openRules()" title="Rules & Paytable">ℹ️</button>
+            <button class="icon-btn" onclick="openSettings()" title="System Settings">⚙️</button>
+            <button class="icon-btn" id="quickSoundBtn" onclick="toggleQuickSound()" title="Mute/Unmute">🔊</button>
+        </div>
+    </div>
+
+    <!-- Paytable Summary Bar (updates dynamically with Bet) -->
+    <div class="paytable-banner" id="paytableBanner">
+        <div class="pay-row"><span class="sym">🐉×3</span> <span id="payRed">ETB 500.00</span></div>
+        <div class="pay-row"><span class="sym">🐲×3</span> <span id="payGreen">ETB 250.00</span></div>
+        <div class="pay-row"><span class="sym">🇨×3</span> <span id="payBlue">ETB 125.00</span></div>
+        <div class="pay-row"><span class="sym">🥈ANY 3</span> <span id="payAny">ETB 25.00</span></div>
+    </div>
+
+    <!-- Slot Reels Frame -->
+    <div class="slot-frame-container">
+        <div class="payline-middle" id="paylineMiddle"></div>
+        <div class="msg-overlay" id="msgOverlay">WIN ETB 500.00!</div>
+        <div class="reels-grid">
+            <!-- Reel 1 -->
+            <div class="reel-column" id="reel1">
+                <div class="symbol-cell"></div>
+                <div class="symbol-cell">🐉</div>
+                <div class="symbol-cell"></div>
+            </div>
+            <!-- Reel 2 -->
+            <div class="reel-column" id="reel2">
+                <div class="symbol-cell"></div>
+                <div class="symbol-cell">🐉</div>
+                <div class="symbol-cell"></div>
+            </div>
+            <!-- Reel 3 -->
+            <div class="reel-column" id="reel3">
+                <div class="symbol-cell"></div>
+                <div class="symbol-cell">🐉</div>
+                <div class="symbol-cell"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Control Bar -->
+    <div class="bottom-control-bar">
+        <div class="credit-bet-info" onclick="addBonusCredit()" style="cursor:pointer;" title="Click to add +500 ETB credit">
+            <div class="info-label">Credit (+)</div>
+            <div class="info-value" id="creditDisplay">ETB 1,000.00</div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="sub-control-btn" onclick="openBetSettings()" title="Change Bet">🪙</button>
+            <div class="spin-btn-wrapper" id="spinBtn" onclick="spinReels()" title="Spin (Space)">
+                <div class="spin-arrows">↻</div>
+            </div>
+            <button class="sub-control-btn" id="autoPlayBtn" onclick="handleAutoPlayBtn()" title="Autoplay">▶▶</button>
+        </div>
+
+        <div class="credit-bet-info" style="text-align: right; cursor:pointer;" onclick="openBetSettings()">
+            <div class="info-label">Total Bet</div>
+            <div class="info-value" id="betDisplay">ETB 5.00</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Dialog -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this) closeModal()">
+    <div class="modal-card">
+        <div class="modal-title" id="modalTitle">Settings</div>
+        <div class="modal-body-content" id="modalBody"></div>
+        <button class="modal-close-btn" id="modalOkBtn" onclick="closeModal()">OK</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. 888 DRAGONS SLOT AUDIO SYNTHESIZER
+    // ==========================================
+    class DragonsAudio {
+        constructor() {
+            this.ctx = null;
+            this.soundOn = localStorage.getItem('dragons_sound') !== 'false';
+        }
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+            return Boolean(this.ctx);
+        }
+        tone(freq, type, dur, vol = 0.08, slide = null, delay = 0) {
+            if (!this.soundOn || !this.init() || !this.ctx) return;
+            try {
+                const t = this.ctx.currentTime + delay;
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, t);
+                if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t + dur);
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.linearRampToValueAtTime(vol, t + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + dur + 0.02);
+            } catch (_) {}
+        }
+        playSpinStart() {
+            this.tone(240, 'triangle', 0.08, 0.08, 420);
+        }
+        playSpinTick() {
+            this.tone(580, 'sine', 0.025, 0.025);
+        }
+        playReelStop(idx) {
+            const freqs = [180, 210, 250];
+            this.tone(freqs[idx] || 200, 'triangle', 0.09, 0.11, 110);
+        }
+        playWin(mult) {
+            const notes = mult >= 50
+                ? [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
+                : [523.25, 659.25, 783.99, 1046.5];
+            notes.forEach((hz, i) => this.tone(hz, 'triangle', 0.22, 0.12, null, i * 0.075));
+        }
+    }
+    const slotAudio = new DragonsAudio();
+
+    // ==========================================
+    // 2. PLAYER STATE & SETTINGS
+    // ==========================================
+    function getPlayerId() {
+        const tg = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tg && tg.id) return String(tg.id);
+        let pid = localStorage.getItem('dragons_player_id');
+        if (!pid) {
+            pid = 'dragon_' + Math.random().toString(36).slice(2, 10);
+            localStorage.setItem('dragons_player_id', pid);
+        }
+        return pid;
+    }
+    const playerId = getPlayerId();
+
+    let credit = 1000.00;
+    let bet = 5.00;
+    let isSpinning = false;
+    let turboSpin = localStorage.getItem('dragons_turbo') === 'true';
+    let skipScreens = localStorage.getItem('dragons_skip') !== 'false';
+    let autoSpinsRemaining = 0;
+    let spinHistory = [];
+    let biggestWin = { user: 'dragon_king', win: 10000 };
+
+    const REEL_SYMBOLS = ['🐉', '🐲', '🇨', '🥈', ''];
+    const BET_OPTIONS = [1, 2, 5, 10, 25, 50, 100];
+
+    function updateDisplay() {
+        document.getElementById('creditDisplay').innerText = `ETB ${credit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('betDisplay').innerText = `ETB ${bet.toFixed(2)}`;
+        document.getElementById('payRed').innerText = `ETB ${(bet * 100).toFixed(2)}`;
+        document.getElementById('payGreen').innerText = `ETB ${(bet * 50).toFixed(2)}`;
+        document.getElementById('payBlue').innerText = `ETB ${(bet * 25).toFixed(2)}`;
+        document.getElementById('payAny').innerText = `ETB ${(bet * 5).toFixed(2)}`;
+
+        const autoBtn = document.getElementById('autoPlayBtn');
+        if (autoSpinsRemaining > 0) {
+            autoBtn.classList.add('auto-active');
+            autoBtn.innerText = String(autoSpinsRemaining);
+        } else {
+            autoBtn.classList.remove('auto-active');
+            autoBtn.innerText = '▶▶';
+        }
+        document.getElementById('quickSoundBtn').innerText = slotAudio.soundOn ? '🔊' : '🔇';
+    }
+
+    async function loadInitialState() {
+        try {
+            const res = await fetch(`/api/dragons/state?playerId=${encodeURIComponent(playerId)}&bet=${bet}`);
+            const data = await res.json();
+            if (data.status === 'success') {
+                credit = Number(data.credit ?? credit);
+                if (Array.isArray(data.history)) spinHistory = data.history;
+                if (data.biggestWin) biggestWin = data.biggestWin;
+                updateDisplay();
+            }
+        } catch (_) {}
+    }
+
+    async function addBonusCredit() {
+        try {
+            const res = await fetch('/api/dragons/bonus', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId, amount: 500 })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                credit = Number(data.credit);
+                slotAudio.playWin(5);
+                updateDisplay();
+            }
+        } catch (_) {}
+    }
+
+    function toggleQuickSound() {
+        slotAudio.soundOn = !slotAudio.soundOn;
+        localStorage.setItem('dragons_sound', String(slotAudio.soundOn));
+        updateDisplay();
+    }
+
+    // ==========================================
+    // 3. SERVER-AUTHORITATIVE REEL SPIN & STAGGERED STOP
+    // ==========================================
+    async function spinReels() {
+        if (isSpinning) return;
+
+        if (credit < bet) {
+            autoSpinsRemaining = 0;
+            updateDisplay();
+            showInsufficientFundsModal();
+            return;
+        }
+
+        isSpinning = true;
+        slotAudio.playSpinStart();
+
+        document.getElementById('spinBtn').classList.add('spinning');
+        document.getElementById('msgOverlay').style.display = 'none';
+        document.getElementById('paylineMiddle').classList.remove('winning');
+
+        const reelCols = [
+            document.getElementById('reel1'),
+            document.getElementById('reel2'),
+            document.getElementById('reel3')
+        ];
+        reelCols.forEach((col) => {
+            col.classList.add('spinning');
+            col.children[1].classList.remove('win-hit');
+        });
+
+        // Visual rolling effect while requesting outcome from backend
+        const rolling = [true, true, true];
+        const rollInterval = setInterval(() => {
+            let playedTick = false;
+            reelCols.forEach((col, idx) => {
+                if (!rolling[idx]) return;
+                for (let row = 0; row < 3; row++) {
+                    col.children[row].innerText = REEL_SYMBOLS[Math.floor(Math.random() * REEL_SYMBOLS.length)];
+                }
+                if (!playedTick) {
+                    slotAudio.playSpinTick();
+                    playedTick = true;
+                }
+            });
+        }, turboSpin ? 45 : 70);
+
+        let spinResult = null;
+        try {
+            const res = await fetch('/api/dragons/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId, bet })
+            });
+            spinResult = await res.json();
+        } catch (_) {
+            spinResult = null;
+        }
+
+        if (!spinResult || spinResult.status !== 'success') {
+            clearInterval(rollInterval);
+            reelCols.forEach((c) => c.classList.remove('spinning'));
+            document.getElementById('spinBtn').classList.remove('spinning');
+            isSpinning = false;
+            autoSpinsRemaining = 0;
+            if (typeof spinResult?.credit === 'number') credit = spinResult.credit;
+            updateDisplay();
+            if (spinResult?.code === 'INSUFFICIENT_FUNDS') {
+                showInsufficientFundsModal();
+            }
+            return;
+        }
+
+        // Staggered reel stops (left -> middle -> right)
+        const baseWait = turboSpin ? 180 : 420;
+        const stepWait = turboSpin ? 110 : 240;
+
+        const stopReel = (idx) => new Promise((resolve) => {
+            setTimeout(() => {
+                rolling[idx] = false;
+                const col = reelCols[idx];
+                col.classList.remove('spinning');
+                for (let r = 0; r < 3; r++) {
+                    col.children[r].innerText = spinResult.reels[idx][r] || '';
+                }
+                slotAudio.playReelStop(idx);
+                resolve();
+            }, baseWait + idx * stepWait);
+        });
+
+        await Promise.all([stopReel(0), stopReel(1), stopReel(2)]);
+        clearInterval(rollInterval);
+
+        credit = Number(spinResult.credit);
+        if (Array.isArray(spinResult.history)) spinHistory = spinResult.history;
+
+        if (spinResult.winAmount > 0) {
+            document.getElementById('paylineMiddle').classList.add('winning');
+            reelCols.forEach((col) => col.children[1].classList.add('win-hit'));
+            const msg = document.getElementById('msgOverlay');
+            msg.innerHTML = `WIN ETB ${Number(spinResult.winAmount).toFixed(2)}!<small>${spinResult.winLabel} (${spinResult.multiplier}x)</small>`;
+            msg.style.display = 'block';
+            slotAudio.playWin(spinResult.multiplier);
+        }
+
+        document.getElementById('spinBtn').classList.remove('spinning');
+        isSpinning = false;
+
+        if (autoSpinsRemaining > 0) {
+            autoSpinsRemaining -= 1;
+            updateDisplay();
+            if (autoSpinsRemaining > 0 && credit >= bet) {
+                const nextDelay = spinResult.winAmount > 0 ? (skipScreens ? 650 : 1200) : (turboSpin ? 250 : 500);
+                setTimeout(() => {
+                    if (autoSpinsRemaining > 0 && !isSpinning) spinReels();
+                }, nextDelay);
+                return;
+            } else {
+                autoSpinsRemaining = 0;
+            }
+        }
+        updateDisplay();
+    }
+
+    // Spacebar spin convenience
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.getElementById('modalBg').style.display !== 'flex') {
+            e.preventDefault();
+            spinReels();
+        }
+    });
+
+    // ==========================================
+    // 4. MODALS (INSUFFICIENT, RULES, SETTINGS, BET, AUTOPLAY, HISTORY)
+    // ==========================================
+    function openModal(title, htmlBody, okLabel = 'OK', onOk = null) {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalBody').innerHTML = htmlBody;
+        const okBtn = document.getElementById('modalOkBtn');
+        okBtn.innerText = okLabel;
+        okBtn.onclick = onOk || closeModal;
+        document.getElementById('modalBg').style.display = 'flex';
+    }
+
+    function showInsufficientFundsModal() {
+        openModal(
+            'MESSAGE',
+            'Insufficient funds to place this bet. Tap <b>ADD +500 ETB</b> below or lower your bet level.',
+            'ADD +500 ETB',
+            async () => {
+                await addBonusCredit();
+                closeModal();
+            }
+        );
+    }
+
+    function openRules() {
+        openModal(
+            'GAME RULES & PAYTABLE',
+            `All symbols pay from left to right on adjacent reels on the single center payline.<br><br>
+            • 🐉 × 3 (Red Dragon): <b>100x</b> (ETB ${(bet * 100).toFixed(2)})<br>
+            • 🐲 × 3 (Green Dragon): <b>50x</b> (ETB ${(bet * 50).toFixed(2)})<br>
+            • 🇨 × 3 (Blue Dragon): <b>25x</b> (ETB ${(bet * 25).toFixed(2)})<br>
+            • 🥈 / Any 3 Dragons: <b>5x</b> (ETB ${(bet * 5).toFixed(2)})<br><br>
+            Theoretical RTP: <b>96.84%</b>`
+        );
+    }
+
+    function openSettings() {
+        openModal(
+            'SYSTEM SETTINGS',
+            `<div class="setting-row"><span>Sound Effects</span><button class="toggle-pill ${slotAudio.soundOn ? 'on' : ''}" onclick="toggleQuickSound(); openSettings();">${slotAudio.soundOn ? 'ON' : 'OFF'}</button></div>
+             <div class="setting-row"><span>Turbo Spin</span><button class="toggle-pill ${turboSpin ? 'on' : ''}" onclick="turboSpin=!turboSpin; localStorage.setItem('dragons_turbo', String(turboSpin)); openSettings();">${turboSpin ? 'ON' : 'OFF'}</button></div>
+             <div class="setting-row"><span>Fast Win Screen</span><button class="toggle-pill ${skipScreens ? 'on' : ''}" onclick="skipScreens=!skipScreens; localStorage.setItem('dragons_skip', String(skipScreens)); openSettings();">${skipScreens ? 'ON' : 'OFF'}</button></div>`
+        );
+    }
+
+    function openBetSettings() {
+        if (isSpinning) return;
+        const buttons = BET_OPTIONS.map((v) =>
+            `<button class="bet-chip-btn ${bet === v ? 'selected' : ''}" onclick="changeBet(${v})">ETB ${v}</button>`
+        ).join('');
+        openModal(
+            'BET SETTINGS',
+            `<div>Current Total Bet: <b style="color:#ffcc00;">ETB ${bet.toFixed(2)}</b></div><div class="bet-grid">${buttons}</div>`
+        );
+    }
+
+    function changeBet(val) {
+        bet = Number(val);
+        updateDisplay();
+        closeModal();
+    }
+
+    function handleAutoPlayBtn() {
+        if (autoSpinsRemaining > 0) {
+            autoSpinsRemaining = 0;
+            updateDisplay();
+            return;
+        }
+        openModal(
+            'AUTOPLAY SETTINGS',
+            `<div>Select number of autospins: <b id="autoCountLabel" style="color:#ffcc00;">25</b></div>
+             <input id="autoSlider" type="range" min="5" max="100" step="5" value="25" oninput="document.getElementById('autoCountLabel').innerText=this.value" style="width:100%; margin:14px 0; accent-color:#ffcc00;">
+             <div style="font-size:11px; color:#b8860b;">Tap ▶▶ anytime to stop autoplay early.</div>`,
+            'START AUTOPLAY',
+            () => {
+                const n = Number(document.getElementById('autoSlider').value) || 25;
+                autoSpinsRemaining = n;
+                closeModal();
+                updateDisplay();
+                spinReels();
+            }
+        );
+    }
+
+    function openHistoryModal() {
+        const rows = spinHistory.length
+            ? spinHistory.slice(0, 15).map((h) => `
+                <div style="display:flex; justify-content:space-between; padding:6px 8px; border-bottom:1px solid rgba(184,134,11,0.2); font-size:11px;">
+                    <span style="color:#aaa;">${h.time}</span>
+                    <span>${(h.middleRow || []).map((s) => s || '—').join(' ')}</span>
+                    <span>Bet ${Number(h.bet).toFixed(0)}</span>
+                    <span style="font-weight:bold; color:${h.win > 0 ? '#00e676' : '#ff5252'};">${h.win > 0 ? '+' + Number(h.win).toFixed(2) : '0.00'}</span>
+                </div>
+            `).join('')
+            : '<div style="text-align:center; padding:16px; color:#aaa;">No spins yet. Press ↻ to spin!</div>';
+
+        openModal(
+            'SPIN HISTORY',
+            `<div style="margin-bottom:8px; font-size:11px; color:#ffcc00; text-align:center;">🏆 Biggest Win: <b>${biggestWin.user}</b> (ETB ${Number(biggestWin.win).toLocaleString('en-US', { minimumFractionDigits: 2 })})</div>${rows}`
+        );
+    }
+
+    function closeModal() {
+        document.getElementById('modalBg').style.display = 'none';
+    }
+
+    updateDisplay();
+    loadInitialState();
+</script>
+</body>
+</html>

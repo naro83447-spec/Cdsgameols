@@ -1,1 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<!-- LITEGAMES_PLAYER_SYNC -->
+<script>
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('playerId') || localStorage.getItem('litegames_player_id');
+    if (pid) {
+      ['litegames_player_id','aviator_player_id','shamo_keno_player_id','shamo_rocket_player_id','mh5_player_id','jetx_player_id','dragons_player_id'].forEach(function(k) {
+        localStorage.setItem(k, pid);
+      });
+    }
+    var pname = params.get('displayName') || localStorage.getItem('litegames_player_name');
+    if (pname) {
+      ['litegames_player_name','shamo_keno_name','shamo_rocket_name','jetx_display_name'].forEach(function(k) {
+        localStorage.setItem(k, pname);
+      });
+    }
+    if (window.parent && window.parent !== window) {
+      var origFetch = window.fetch;
+      window.fetch = function() {
+        var reqUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
+        return origFetch.apply(this, arguments).then(function(res) {
+          try {
+            var u = reqUrl;
+            if (u.indexOf('/api/') !== -1) {
+              setTimeout(function() {
+                window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, '*');
+              }, 120);
+            }
+          } catch(_) {}
+          return res;
+        });
+      };
+    } else {
+      window.addEventListener('DOMContentLoaded', function() {
+        var btn = document.createElement('a');
+        btn.href = '/';
+        btn.innerHTML = '&#8592; Lite Games';
+        btn.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
+        document.body.appendChild(btn);
+      });
+    }
+  } catch (e) {}
+})();
+</script>
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Classic Keno - Shamo Style</title>
+    <meta name="description" content="Classic Keno - Shamo Style live multiplayer Keno game with instant draws, paytables, live bets, and chat.">
+    <meta property="og:title" content="Classic Keno - Shamo Style">
+    <meta property="og:description" content="Classic Keno - Shamo Style live multiplayer Keno game with instant draws, paytables, live bets, and chat.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        shamo: {
+                            dark: '#1a0505',
+                            card: '#240808',
+                            border: '#3c0d0d',
+                            red: '#8b1e1e',
+                            gold: '#f59e0b',
+                            goldHover: '#d97706',
+                            yellow: '#fbbf24',
+                            lightRed: '#a82c2c'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #120202;
+            color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a0505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a1515;
+            border-radius: 2px;
+        }
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.8); }
+        }
+        .gold-glow {
+            animation: pulse-gold 2s infinite;
+        }
+        .scrollbar-none::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-none {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start select-none">
+
+    <!-- Toast Notification / Message Box -->
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 bg-[#240808] border border-amber-500/50 text-amber-300 px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none flex items-center space-x-3 max-w-[92vw]">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-amber-400"></i>
+        <span id="toast-message" class="text-sm font-medium">Notification message</span>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="w-full max-w-md bg-[#160303] min-h-screen flex flex-col shadow-2xl relative border-x border-[#3c0d0d]">
+
+        <!-- Header -->
+        <header class="bg-[#1e0404] px-4 py-3 flex items-center justify-between border-b border-[#3c0d0d] sticky top-0 z-30">
+            <div class="flex items-center space-x-3">
+                <button onclick="openMenu()" aria-label="Game Settings" class="text-gray-300 hover:text-amber-400 p-1 text-lg transition">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="flex flex-col">
+                    <span class="text-amber-500 font-extrabold tracking-wider text-xl italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">SHAMO</span>
+                    <span class="text-[10px] text-gray-400 -mt-1 font-semibold">Classic Keno</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <!-- Balance Box (Click to +500 ETB top-up) -->
+                <button onclick="topUpBalance()" title="Click to add +500 ETB" class="bg-[#2d0909] hover:bg-[#3c0d0d] border border-[#521313] px-3 py-1.5 rounded-lg flex items-center space-x-2 shadow-inner active:scale-95 transition">
+                    <span id="user-balance" class="text-amber-400 font-bold text-sm">1000.00</span>
+                    <span class="text-[11px] text-amber-600 font-semibold uppercase">ETB</span>
+                    <i class="fa-solid fa-plus text-[10px] text-amber-400/80"></i>
+                </button>
+                <!-- Chat Trigger -->
+                <button onclick="openChat()" aria-label="Live Chat" class="bg-[#2d0909] hover:bg-[#3c0d0d] border border-[#521313] text-gray-300 hover:text-amber-400 p-2 rounded-lg text-sm relative transition">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span id="chat-badge" class="absolute -top-1 -right-1 bg-amber-500 text-[9px] text-black font-extrabold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Round Status & Timer Bar -->
+        <div class="bg-[#200505] px-4 py-2.5 border-b border-[#3c0d0d] flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span id="round-number" class="text-xs font-semibold text-gray-300">Round #208680</span>
+                <span id="round-status-badge" class="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] rounded font-bold uppercase tracking-wide">Betting Open</span>
+            </div>
+            <div class="flex items-center space-x-1.5 text-amber-400 font-mono font-bold text-sm">
+                <i class="fa-regular fa-clock text-xs"></i>
+                <span id="round-timer">0:45</span>
+            </div>
+        </div>
+
+        <!-- Dynamic Game / Drawing Area -->
+        <div class="relative bg-[#1a0404] p-3 border-b border-[#3c0d0d]">
+            <div id="game-stage-container">
+                <!-- Top Info during Selection -->
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <div class="flex flex-col">
+                        <div class="flex items-center space-x-2">
+                            <span id="picks-count-text" class="text-xs font-semibold text-gray-300">0 Picks</span>
+                            <span id="active-tickets-pill" class="hidden px-1.5 py-0.5 bg-green-600/20 border border-green-500/40 text-green-400 text-[10px] font-bold rounded">0 Active</span>
+                        </div>
+                        <span id="win-potential-text" class="text-amber-400 font-bold text-sm">Win up to 0.00 ETB</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="quickPick()" title="Random Quick Pick" class="bg-[#2c0a0a] hover:bg-[#3c0d0d] border border-[#521313] text-amber-400 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition active:scale-95">
+                            <i class="fa-solid fa-dice"></i>
+                            <span>Quick</span>
+                        </button>
+                        <button onclick="clearSelection()" title="Clear Picks" class="bg-[#2c0a0a] hover:bg-[#3c0d0d] border border-[#521313] text-red-400 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition active:scale-95">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Paytable Bar (Shows when picks > 0) -->
+                <div id="paytable-bar" class="hidden overflow-x-auto scrollbar-none mb-2 py-1 px-1 bg-[#240808] border border-[#3c0d0d] rounded-lg">
+                    <div id="paytable-content" class="flex space-x-2 text-center text-[10px] min-w-max"></div>
+                </div>
+
+                <!-- Grid wrapper (Either Grid or Ball Machine Animation) -->
+                <div class="relative">
+                    <!-- 80 Numbers Grid -->
+                    <div id="keno-grid" class="grid grid-cols-10 gap-1 sm:gap-1.5"></div>
+
+                    <!-- Live Drawing Animation Overlay -->
+                    <div id="drawing-overlay" class="absolute inset-0 bg-[#160303]/92 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center hidden z-20 p-4">
+                        <div class="relative w-36 h-36 mb-3 flex items-center justify-center">
+                            <div class="absolute inset-0 border-4 border-amber-500/40 rounded-full flex items-center justify-center animate-spin" style="animation-duration: 12s;">
+                                <div class="w-full h-1 bg-amber-500/30 absolute"></div>
+                                <div class="h-full w-1 bg-amber-500/30 absolute"></div>
+                            </div>
+                            <div class="absolute inset-2 border-2 border-dashed border-amber-400/30 rounded-full"></div>
+                            <div id="drawn-ball-display" class="w-20 h-20 bg-gradient-to-br from-amber-300 to-amber-600 text-black font-black text-3xl rounded-full shadow-[0_0_25px_rgba(245,158,11,0.8)] flex items-center justify-center transform scale-100 transition-transform duration-200 border-2 border-white">
+                                --
+                            </div>
+                        </div>
+
+                        <div class="text-center mb-3">
+                            <span class="text-xs text-gray-400 uppercase tracking-widest font-bold">Drawing Numbers</span>
+                            <div id="draw-counter" class="text-2xl font-black text-amber-400 mt-0.5">0 / 20</div>
+                        </div>
+
+                        <!-- Mini drawn trail inside overlay -->
+                        <div id="drawn-trail" class="flex flex-wrap justify-center gap-1 max-w-xs"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Betting Controls Panel -->
+        <div class="bg-[#1e0404] p-3 border-b border-[#3c0d0d]">
+            <div class="flex items-center justify-between mb-2 bg-[#2d0909] border border-[#521313] rounded-xl p-1 space-x-1">
+                <button onclick="adjustBet(-5)" class="w-10 h-10 bg-[#3c0d0d] hover:bg-[#521313] text-white font-bold rounded-lg flex items-center justify-center text-lg active:scale-95 transition">
+                    <i class="fa-solid fa-minus text-sm"></i>
+                </button>
+                <div class="flex items-center space-x-1 flex-1 justify-center">
+                    <input type="number" id="bet-amount-input" value="10.00" step="1" min="1" max="10000" onchange="updateBetInput(this.value)" class="bg-transparent text-center font-extrabold text-amber-400 text-lg w-24 focus:outline-none">
+                    <span class="text-xs text-gray-400 font-semibold uppercase">ETB</span>
+                </div>
+                <button onclick="adjustBet(5)" class="w-10 h-10 bg-[#3c0d0d] hover:bg-[#521313] text-white font-bold rounded-lg flex items-center justify-center text-lg active:scale-95 transition">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                </button>
+                <button onclick="multiplyBet(2)" class="px-3 py-2 bg-[#3c0d0d] hover:bg-[#521313] text-amber-300 font-bold rounded-lg text-xs transition border border-[#521313]">
+                    X2
+                </button>
+                <button onclick="setMaxBet()" class="px-3 py-2 bg-[#3c0d0d] hover:bg-[#521313] text-amber-300 font-bold rounded-lg text-xs transition border border-[#521313]">
+                    MAX
+                </button>
+            </div>
+
+            <!-- Main BET Button -->
+            <button id="bet-action-btn" onclick="placeBet()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-base rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.4)] active:scale-[0.98] transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-bolt text-sm"></i>
+                <span id="bet-btn-text">PLACE BET</span>
+            </button>
+        </div>
+
+        <!-- Navigation Tabs (Live, History, Results) -->
+        <div class="flex border-b border-[#3c0d0d] bg-[#180303] text-xs font-semibold">
+            <button onclick="switchTab('live')" id="tab-live" class="flex-1 py-3 text-center text-amber-400 border-b-2 border-amber-400 transition">Live</button>
+            <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition">History</button>
+            <button onclick="switchTab('results')" id="tab-results" class="flex-1 py-3 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition">Results</button>
+        </div>
+
+        <!-- Tab Contents Container -->
+        <div class="flex-1 bg-[#140202] overflow-y-auto max-h-64 p-3">
+
+            <!-- LIVE TAB CONTENT -->
+            <div id="content-live" class="space-y-3">
+                <div class="text-[11px] text-gray-400 font-medium flex justify-between items-center px-1">
+                    <span>LIVE BETS</span>
+                    <span id="live-total-bets">All Bets: 429</span>
+                </div>
+                <div id="live-bets-list" class="space-y-2"></div>
+            </div>
+
+            <!-- HISTORY TAB CONTENT -->
+            <div id="content-history" class="hidden space-y-3">
+                <div class="flex space-x-2 mb-2">
+                    <button onclick="switchHistorySub('my')" id="subtab-my" class="px-3 py-1 bg-amber-500 text-black font-bold text-xs rounded-lg">My Bets</button>
+                    <button onclick="switchHistorySub('top')" id="subtab-top" class="px-3 py-1 bg-[#2c0a0a] text-gray-300 font-bold text-xs rounded-lg">Top Bets</button>
+                </div>
+                <div id="history-items" class="space-y-2">
+                    <div class="text-center py-6 text-gray-500 text-xs font-medium">No betting history found for today.</div>
+                </div>
+            </div>
+
+            <!-- RESULTS TAB CONTENT -->
+            <div id="content-results" class="hidden space-y-3">
+                <!-- Hot / Cold Numbers -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-[#1e0505] border border-[#3c0d0d] p-2.5 rounded-xl">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1.5">HOT NUMBERS</span>
+                        <div id="hot-numbers-row" class="flex space-x-1"></div>
+                    </div>
+                    <div class="bg-[#1e0505] border border-[#3c0d0d] p-2.5 rounded-xl">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1.5">COLD NUMBERS</span>
+                        <div id="cold-numbers-row" class="flex space-x-1"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Results Card -->
+                <div class="bg-[#1e0505] border border-[#3c0d0d] p-3 rounded-xl space-y-2">
+                    <div class="flex justify-between items-center text-xs font-semibold">
+                        <span class="text-amber-400" id="recent-result-round">Round #208679</span>
+                        <span class="text-gray-400 text-[10px]" id="recent-result-time">Just now</span>
+                    </div>
+                    <div id="recent-drawn-grid" class="grid grid-cols-10 gap-1"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Game Settings Modal -->
+    <div id="menu-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#1e0404] border border-[#3c0d0d] w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-[#3c0d0d] pb-3">
+                <h3 class="font-extrabold text-amber-400 text-base">Game Settings</h3>
+                <button onclick="closeMenu()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 py-2 text-sm">
+                <label class="flex justify-between items-center cursor-pointer">
+                    <span class="text-gray-300">Sound Effects</span>
+                    <input id="setting-sfx" type="checkbox" checked onchange="toggleSetting('sfx', this.checked)" class="accent-amber-500 w-4 h-4">
+                </label>
+                <label class="flex justify-between items-center cursor-pointer">
+                    <span class="text-gray-300">Background Music</span>
+                    <input id="setting-music" type="checkbox" checked onchange="toggleSetting('music', this.checked)" class="accent-amber-500 w-4 h-4">
+                </label>
+                <label class="flex justify-between items-center cursor-pointer">
+                    <span class="text-gray-300">Quick Spin Mode</span>
+                    <input id="setting-quick" type="checkbox" onchange="toggleSetting('quick', this.checked)" class="accent-amber-500 w-4 h-4">
+                </label>
+                <div class="pt-2 border-t border-[#3c0d0d] flex items-center justify-between text-xs text-gray-400">
+                    <span>Player ID: <strong id="settings-player-id" class="text-amber-300">--</strong></span>
+                    <button onclick="topUpBalance(); closeMenu();" class="px-2.5 py-1 bg-[#2d0909] border border-[#521313] text-amber-400 rounded-lg font-bold">+500 ETB</button>
+                </div>
+            </div>
+            <button onclick="closeMenu()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-sm transition">Close</button>
+        </div>
+    </div>
+
+    <!-- Live Chat Modal -->
+    <div id="chat-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-3">
+        <div class="bg-[#1e0404] border border-[#3c0d0d] w-full max-w-md rounded-2xl p-4 space-y-3 shadow-2xl flex flex-col max-h-[75vh]">
+            <div class="flex justify-between items-center border-b border-[#3c0d0d] pb-2.5">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-comment-dots text-amber-400"></i>
+                    <h3 class="font-extrabold text-amber-400 text-sm">Live Keno Chat</h3>
+                </div>
+                <button onclick="closeChat()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="chat-messages-list" class="flex-1 overflow-y-auto space-y-2 py-1 min-h-[180px] max-h-[45vh]"></div>
+            <form onsubmit="sendChatMessage(event)" class="flex items-center space-x-2 pt-2 border-t border-[#3c0d0d]">
+                <input id="chat-input" type="text" maxlength="160" placeholder="Say something to the room..." class="flex-1 bg-[#2d0909] border border-[#521313] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-amber-500">
+                <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl transition">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 1. PERSISTENT PLAYER IDENTITY & SETTINGS
+        // ============================================================
+        function getOrCreatePlayerId() {
+            let pid = localStorage.getItem('shamo_keno_player_id');
+            if (!pid) {
+                pid = 'shamo_' + Math.random().toString(36).slice(2, 10);
+                localStorage.setItem('shamo_keno_player_id', pid);
+            }
+            return pid;
+        }
+
+        const playerId = getOrCreatePlayerId();
+        let displayName = localStorage.getItem('shamo_keno_name') || playerId;
+
+        const settings = {
+            sfx: localStorage.getItem('shamo_keno_sfx') !== 'false',
+            music: localStorage.getItem('shamo_keno_music') !== 'false',
+            quick: localStorage.getItem('shamo_keno_quick') === 'true'
+        };
+
+        // ============================================================
+        // 2. WEB AUDIO SYNTHESIZER (SFX & LOUNGE MUSIC)
+        // ============================================================
+        const KenoAudio = (() => {
+            let ctx = null;
+            let musicTimer = null;
+            let chordIndex = 0;
+
+            function ensureCtx() {
+                if (!ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) ctx = new AudioCtx();
+                }
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume().catch(() => {});
+                }
+                return ctx;
+            }
+
+            function tone(freq, duration = 0.08, type = 'sine', vol = 0.08, delay = 0) {
+                if (!settings.sfx) return;
+                const c = ensureCtx();
+                if (!c) return;
+                const t = c.currentTime + delay;
+                const osc = c.createOscillator();
+                const gain = c.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.0001, t);
+                gain.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+                osc.connect(gain);
+                gain.connect(c.destination);
+                osc.start(t);
+                osc.stop(t + duration + 0.02);
+            }
+
+            function startMusic() {
+                if (!settings.music || musicTimer) return;
+                const chords = [
+                    [220, 261.63, 329.63],
+                    [196, 246.94, 293.66],
+                    [174.61, 220, 261.63],
+                    [164.81, 196, 246.94]
+                ];
+                musicTimer = setInterval(() => {
+                    if (!settings.music) return;
+                    const c = ensureCtx();
+                    if (!c || c.state !== 'running') return;
+                    const notes = chords[chordIndex % chords.length];
+                    chordIndex++;
+                    notes.forEach((f, idx) => {
+                        const t = c.currentTime + idx * 0.08;
+                        const osc = c.createOscillator();
+                        const gain = c.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(f, t);
+                        gain.gain.setValueAtTime(0.0001, t);
+                        gain.gain.exponentialRampToValueAtTime(0.015, t + 0.15);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+                        osc.connect(gain);
+                        gain.connect(c.destination);
+                        osc.start(t);
+                        osc.stop(t + 1.65);
+                    });
+                }, 1800);
+            }
+
+            function stopMusic() {
+                if (musicTimer) {
+                    clearInterval(musicTimer);
+                    musicTimer = null;
+                }
+            }
+
+            return {
+                unlock() {
+                    ensureCtx();
+                    if (settings.music) startMusic();
+                },
+                click() { tone(620, 0.06, 'sine', 0.06); },
+                unclick() { tone(420, 0.05, 'sine', 0.05); },
+                quickPick() {
+                    [440, 554, 659, 784, 880].forEach((f, i) => tone(f, 0.06, 'triangle', 0.05, i * 0.035));
+                },
+                betPlaced() {
+                    tone(523.25, 0.09, 'triangle', 0.08, 0);
+                    tone(659.25, 0.12, 'triangle', 0.09, 0.07);
+                    tone(783.99, 0.16, 'triangle', 0.08, 0.14);
+                },
+                ballPop(isHit) {
+                    if (isHit) {
+                        tone(784, 0.11, 'triangle', 0.11, 0);
+                        tone(1046.5, 0.16, 'sine', 0.11, 0.06);
+                    } else {
+                        tone(340, 0.07, 'sine', 0.05, 0);
+                    }
+                },
+                win() {
+                    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) =>
+                        tone(f, 0.22, 'triangle', 0.1, i * 0.08)
+                    );
+                },
+                syncMusic() {
+                    if (settings.music) startMusic();
+                    else stopMusic();
+                }
+            };
+        })();
+
+        // ============================================================
+        // 3. GAME STATE (SERVER-AUTHORITATIVE)
+        // ============================================================
+        let balance = 1000.00;
+        let currentBet = 10.00;
+        let selectedNumbers = [];
+        let maxPicks = 10;
+        let minBet = 1;
+        let maxBet = 10000;
+        let roundNumber = 208680;
+        let roundTimer = 45;
+        let roundPhase = 'BETTING_OPEN'; // BETTING_OPEN, BETTING_CLOSED, DRAWING, SETTLED
+        let drawnNumbersThisRound = [];
+        let payoutTable = {};
+        let myActiveTickets = [];
+        let myBetHistory = [];
+        let leaders = [];
+        let publicTickets = [];
+        let pastResults = [];
+        let hotNumbers = [];
+        let coldNumbers = [];
+        let statsList = [];
+        let allBetsCount = 429;
+        let chatMessages = [];
+        let unreadChatCount = 0;
+        let isChatOpen = false;
+        let currentHistorySub = 'my';
+        let socket = null;
+
+        const FALLBACK_PUBLIC_BETS = [
+            { ticketId: 'demo1', user: 'c***s', bet: 200, picks: [19, 77, 78] },
+            { ticketId: 'demo2', user: 'i***c', bet: 50, picks: [14, 16, 17] }
+        ];
+
+        // ============================================================
+        // 4. INITIALIZATION & SOCKET.IO (/keno)
+        // ============================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('setting-sfx').checked = settings.sfx;
+            document.getElementById('setting-music').checked = settings.music;
+            document.getElementById('setting-quick').checked = settings.quick;
+            document.getElementById('settings-player-id').innerText = playerId;
+
+            renderGrid();
+            updateBalanceDisplay();
+            updatePicksInfo();
+            renderLiveBets();
+
+            document.body.addEventListener('pointerdown', () => KenoAudio.unlock(), { once: true });
+
+            initSocket();
+        });
+
+        function initSocket() {
+            if (typeof io !== 'function') {
+                fetchStateFallback();
+                return;
+            }
+
+            socket = io('/keno', {
+                auth: { playerId, displayName },
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                socket.emit('player:identify', { playerId, displayName });
+            });
+
+            socket.on('room:state', (snap) => {
+                applyRoomSnapshot(snap);
+            });
+
+            socket.on('balance:update', (data) => {
+                if (typeof data.balance === 'number') {
+                    balance = data.balance;
+                    updateBalanceDisplay();
+                }
+                if (Array.isArray(data.tickets)) {
+                    myActiveTickets = data.tickets;
+                    updateActiveTicketsBadge();
+                }
+            });
+
+            socket.on('round:open', (data) => {
+                roundNumber = data.roundId || roundNumber + 1;
+                roundPhase = 'BETTING_OPEN';
+                roundTimer = data.timeLeft || 45;
+                drawnNumbersThisRound = [];
+                myActiveTickets = [];
+                publicTickets = [];
+                if (typeof data.allBetsCount === 'number') allBetsCount = data.allBetsCount;
+
+                document.getElementById('drawing-overlay').classList.add('hidden');
+                document.getElementById('drawn-trail').innerHTML = '';
+                document.getElementById('drawn-ball-display').innerText = '--';
+                document.getElementById('draw-counter').innerText = '0 / 20';
+
+                updateRoundHeaderUI();
+                updateActiveTicketsBadge();
+                updateGridUI();
+                renderLiveBets();
+            });
+
+            socket.on('round:tick', (data) => {
+                if (data.roundId) roundNumber = data.roundId;
+                if (data.phase) roundPhase = data.phase;
+                if (typeof data.timeLeft === 'number') roundTimer = data.timeLeft;
+                updateRoundHeaderUI();
+            });
+
+            socket.on('round:closed', (data) => {
+                roundNumber = data.roundId || roundNumber;
+                roundPhase = 'BETTING_CLOSED';
+                roundTimer = data.timeLeft || 0;
+                updateRoundHeaderUI();
+            });
+
+            socket.on('round:draw_start', (data) => {
+                roundNumber = data.roundId || roundNumber;
+                roundPhase = 'DRAWING';
+                drawnNumbersThisRound = [];
+                document.getElementById('drawn-trail').innerHTML = '';
+                document.getElementById('drawn-ball-display').innerText = '--';
+                document.getElementById('draw-counter').innerText = '0 / ' + (data.totalBalls || 20);
+                document.getElementById('drawing-overlay').classList.remove('hidden');
+                updateRoundHeaderUI();
+                updateGridUI();
+            });
+
+            socket.on('round:ball', (data) => {
+                roundPhase = 'DRAWING';
+                drawnNumbersThisRound = Array.isArray(data.drawnSoFar)
+                    ? [...data.drawnSoFar]
+                    : [...drawnNumbersThisRound, data.number];
+
+                const num = data.number;
+                const idx = data.ballIndex || drawnNumbersThisRound.length;
+                const total = data.totalBalls || 20;
+
+                document.getElementById('draw-counter').innerText = `${idx} / ${total}`;
+                const ballDisplay = document.getElementById('drawn-ball-display');
+                ballDisplay.innerText = num;
+
+                const speedMs = settings.quick ? 70 : 150;
+                ballDisplay.style.transform = 'scale(1.14)';
+                setTimeout(() => { ballDisplay.style.transform = 'scale(1)'; }, speedMs);
+
+                const isPlayerHit = isNumberInMyPicks(num);
+                KenoAudio.ballPop(isPlayerHit);
+
+                // Append mini ball in overlay trail
+                const trail = document.getElementById('drawn-trail');
+                const pill = document.createElement('span');
+                pill.className = isPlayerHit
+                    ? 'w-6 h-6 rounded-full bg-green-500 text-black font-black text-[10px] flex items-center justify-center border border-white shadow'
+                    : 'w-6 h-6 rounded-full bg-[#2d0909] border border-amber-500/40 text-amber-300 font-bold text-[10px] flex items-center justify-center';
+                pill.innerText = num;
+                trail.appendChild(pill);
+
+                updateGridUI();
+            });
+
+            socket.on('ticket:placed', (data) => {
+                if (typeof data.allBetsCount === 'number') {
+                    allBetsCount = data.allBetsCount;
+                }
+                if (data.ticket) {
+                    publicTickets.unshift(data.ticket);
+                    if (publicTickets.length > 25) publicTickets.length = 25;
+                }
+                renderLiveBets();
+            });
+
+            socket.on('player:settled', (data) => {
+                if (typeof data.balance === 'number') {
+                    balance = data.balance;
+                    updateBalanceDisplay();
+                }
+                if (Array.isArray(data.tickets)) {
+                    myActiveTickets = data.tickets;
+                    let totalWin = 0;
+                    let bestHits = 0;
+                    let bestPicks = 0;
+                    data.tickets.forEach((t) => {
+                        totalWin += Number(t.win || 0);
+                        if ((t.hits?.length || 0) >= bestHits) {
+                            bestHits = t.hits?.length || 0;
+                            bestPicks = t.picks?.length || 0;
+                        }
+                    });
+                    if (totalWin > 0) {
+                        KenoAudio.win();
+                        showToast(`Congratulations! You hit ${bestHits}/${bestPicks} numbers and won ${totalWin.toFixed(2)} ETB!`, 'success');
+                    } else if (data.tickets.length > 0) {
+                        showToast(`Round #${data.roundId} finished (${bestHits} hits). Try again!`, 'info');
+                    }
+                }
+                if (Array.isArray(data.history)) {
+                    myBetHistory = data.history;
+                    if (currentHistorySub === 'my') renderMyBets();
+                }
+            });
+
+            socket.on('round:settled', (data) => {
+                roundPhase = 'SETTLED';
+                if (Array.isArray(data.drawnNumbers)) {
+                    drawnNumbersThisRound = [...data.drawnNumbers];
+                }
+                if (Array.isArray(data.pastResults)) pastResults = data.pastResults;
+                if (Array.isArray(data.hotNumbers)) hotNumbers = data.hotNumbers;
+                if (Array.isArray(data.coldNumbers)) coldNumbers = data.coldNumbers;
+                if (Array.isArray(data.stats)) statsList = data.stats;
+                if (Array.isArray(data.leaders)) leaders = data.leaders;
+
+                setTimeout(() => {
+                    document.getElementById('drawing-overlay').classList.add('hidden');
+                }, settings.quick ? 500 : 1100);
+
+                updateRoundHeaderUI();
+                updateGridUI();
+                populateRecentResults();
+                if (currentHistorySub === 'top') renderTopBets();
+            });
+
+            socket.on('chat:message', (msg) => {
+                chatMessages.push(msg);
+                if (chatMessages.length > 60) chatMessages.shift();
+                renderChatMessages();
+                if (!isChatOpen) {
+                    unreadChatCount++;
+                    updateChatBadge();
+                }
+            });
+        }
+
+        async function fetchStateFallback() {
+            try {
+                const res = await fetch(`/api/keno/state?playerId=${encodeURIComponent(playerId)}`);
+                const data = await res.json();
+                if (data.status === 'success') applyRoomSnapshot(data);
+            } catch (e) {
+                console.warn('Keno state fallback failed:', e);
+            }
+        }
+
+        function applyRoomSnapshot(snap) {
+            if (!snap) return;
+            roundNumber = snap.roundId || roundNumber;
+            roundPhase = snap.phase || 'BETTING_OPEN';
+            roundTimer = typeof snap.timeLeft === 'number' ? snap.timeLeft : 45;
+            maxPicks = snap.maxPicks || 10;
+            minBet = snap.minBet || 1;
+            maxBet = snap.maxBet || 10000;
+            payoutTable = snap.payoutTable || {};
+            drawnNumbersThisRound = Array.isArray(snap.drawnSoFar) ? [...snap.drawnSoFar] : [];
+            allBetsCount = typeof snap.allBetsCount === 'number' ? snap.allBetsCount : allBetsCount;
+            pastResults = Array.isArray(snap.pastResults) ? snap.pastResults : [];
+            hotNumbers = Array.isArray(snap.hotNumbers) ? snap.hotNumbers : [];
+            coldNumbers = Array.isArray(snap.coldNumbers) ? snap.coldNumbers : [];
+            statsList = Array.isArray(snap.stats) ? snap.stats : [];
+            leaders = Array.isArray(snap.leaders) ? snap.leaders : [];
+            publicTickets = Array.isArray(snap.publicTickets) ? snap.publicTickets : [];
+
+            if (Array.isArray(snap.chatMessages)) {
+                chatMessages = snap.chatMessages;
+                unreadChatCount = chatMessages.length > 0 ? Math.min(9, chatMessages.length) : 0;
+                updateChatBadge();
+                renderChatMessages();
+            }
+
+            if (snap.player) {
+                balance = Number(snap.player.balance ?? balance);
+                displayName = snap.player.displayName || displayName;
+                myActiveTickets = Array.isArray(snap.player.tickets) ? snap.player.tickets : [];
+                myBetHistory = Array.isArray(snap.player.history) ? snap.player.history : [];
+            }
+
+            if (roundPhase === 'DRAWING') {
+                document.getElementById('drawing-overlay').classList.remove('hidden');
+                document.getElementById('draw-counter').innerText = `${drawnNumbersThisRound.length} / 20`;
+                const lastBall = drawnNumbersThisRound[drawnNumbersThisRound.length - 1];
+                document.getElementById('drawn-ball-display').innerText = lastBall || '--';
+            } else {
+                document.getElementById('drawing-overlay').classList.add('hidden');
+            }
+
+            updateBalanceDisplay();
+            updateRoundHeaderUI();
+            updateActiveTicketsBadge();
+            updateGridUI();
+            updatePicksInfo();
+            renderLiveBets();
+            if (currentHistorySub === 'my') renderMyBets();
+            else renderTopBets();
+            populateRecentResults();
+        }
+
+        // ============================================================
+        // 5. GRID, PICKS & PAYTABLE UI
+        // ============================================================
+        function isNumberInMyPicks(num) {
+            if (selectedNumbers.includes(num)) return true;
+            return myActiveTickets.some((t) => Array.isArray(t.picks) && t.picks.includes(num));
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('keno-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 80; i++) {
+                const btn = document.createElement('button');
+                btn.id = `keno-num-${i}`;
+                btn.type = 'button';
+                btn.innerText = i;
+                btn.className = 'w-full aspect-square rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-150 bg-[#2d0909] border border-[#521313] text-gray-300 hover:border-amber-500/60';
+                btn.onclick = () => toggleNumber(i);
+                grid.appendChild(btn);
+            }
+        }
+
+        function toggleNumber(num) {
+            if (roundPhase !== 'BETTING_OPEN') {
+                showToast('Cannot change picks while round is drawing!', 'warning');
+                return;
+            }
+
+            const idx = selectedNumbers.indexOf(num);
+            if (idx > -1) {
+                selectedNumbers.splice(idx, 1);
+                KenoAudio.unclick();
+            } else {
+                if (selectedNumbers.length >= maxPicks) {
+                    showToast(`You can pick a maximum of ${maxPicks} numbers!`, 'warning');
+                    return;
+                }
+                selectedNumbers.push(num);
+                KenoAudio.click();
+            }
+            selectedNumbers.sort((a, b) => a - b);
+            updateGridUI();
+            updatePicksInfo();
+        }
+
+        function updateGridUI() {
+            const drawnSet = new Set(drawnNumbersThisRound);
+            const activePickedSet = new Set();
+            myActiveTickets.forEach((t) => (t.picks || []).forEach((n) => activePickedSet.add(n)));
+
+            for (let i = 1; i <= 80; i++) {
+                const btn = document.getElementById(`keno-num-${i}`);
+                if (!btn) continue;
+
+                const isSelected = selectedNumbers.includes(i);
+                const isSubmitted = activePickedSet.has(i);
+                const isDrawn = drawnSet.has(i);
+
+                if (isDrawn && (isSelected || isSubmitted)) {
+                    btn.className = 'w-full aspect-square rounded-lg font-extrabold text-xs sm:text-sm flex items-center justify-center bg-green-600 text-white shadow-[0_0_12px_rgba(22,163,74,0.85)] border-2 border-white transform scale-105 transition-all duration-150';
+                } else if (isDrawn) {
+                    btn.className = 'w-full aspect-square rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center bg-amber-950/90 border border-amber-500/70 text-amber-300 transition-all duration-150';
+                } else if (isSelected) {
+                    btn.className = 'w-full aspect-square rounded-lg font-extrabold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.6)] transform scale-105 border border-white transition-all duration-150';
+                } else if (isSubmitted) {
+                    btn.className = 'w-full aspect-square rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center bg-amber-500/25 border border-amber-400 text-amber-300 transition-all duration-150';
+                } else {
+                    btn.className = 'w-full aspect-square rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-150 bg-[#2d0909] border border-[#521313] text-gray-300 hover:border-amber-500/60';
+                }
+            }
+        }
+
+        function updatePicksInfo() {
+            const count = selectedNumbers.length;
+            document.getElementById('picks-count-text').innerText = `${count} ${count === 1 ? 'Pick' : 'Picks'}`;
+
+            const paybar = document.getElementById('paytable-bar');
+            const paycontent = document.getElementById('paytable-content');
+
+            if (count > 0 && payoutTable[count]) {
+                paybar.classList.remove('hidden');
+                const tierMap = payoutTable[count];
+                const entries = Object.entries(tierMap)
+                    .map(([hits, mult]) => [Number(hits), Number(mult)])
+                    .filter(([, mult]) => mult > 0)
+                    .sort((a, b) => a[0] - b[0]);
+
+                let maxWin = 0;
+                let html = '';
+                for (const [hits, mult] of entries) {
+                    const payout = mult * currentBet;
+                    if (payout > maxWin) maxWin = payout;
+                    html += `<div class="bg-[#1a0404] border border-[#3c0d0d] px-2.5 py-1 rounded flex flex-col items-center"><span class="text-gray-400">${hits} ${hits === 1 ? 'Hit' : 'Hits'}</span><span class="text-amber-400 font-bold">${mult}x</span></div>`;
+                }
+                paycontent.innerHTML = html;
+                document.getElementById('win-potential-text').innerText = `Win up to ${maxWin.toFixed(2)} ETB`;
+            } else {
+                paybar.classList.add('hidden');
+                document.getElementById('win-potential-text').innerText = 'Win up to 0.00 ETB';
+            }
+        }
+
+        function quickPick() {
+            if (roundPhase !== 'BETTING_OPEN') {
+                showToast('Wait for next round to pick numbers!', 'warning');
+                return;
+            }
+            const pool = [];
+            for (let i = 1; i <= 80; i++) pool.push(i);
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const tmp = pool[i];
+                pool[i] = pool[j];
+                pool[j] = tmp;
+            }
+            selectedNumbers = pool.slice(0, 5).sort((a, b) => a - b);
+            KenoAudio.quickPick();
+            updateGridUI();
+            updatePicksInfo();
+        }
+
+        function clearSelection() {
+            if (roundPhase !== 'BETTING_OPEN') return;
+            selectedNumbers = [];
+            KenoAudio.unclick();
+            updateGridUI();
+            updatePicksInfo();
+        }
+
+        // ============================================================
+        // 6. BET CONTROLS & SUBMISSION (AUTO-CLEARS PICKS AFTER BET)
+        // ============================================================
+        function adjustBet(amount) {
+            currentBet = Math.min(maxBet, Math.max(minBet, currentBet + amount));
+            document.getElementById('bet-amount-input').value = currentBet.toFixed(2);
+            updatePicksInfo();
+        }
+
+        function updateBetInput(val) {
+            currentBet = Math.min(maxBet, Math.max(minBet, parseFloat(val) || minBet));
+            document.getElementById('bet-amount-input').value = currentBet.toFixed(2);
+            updatePicksInfo();
+        }
+
+        function multiplyBet(factor) {
+            currentBet = Math.min(maxBet, Math.max(minBet, currentBet * factor));
+            document.getElementById('bet-amount-input').value = currentBet.toFixed(2);
+            updatePicksInfo();
+        }
+
+        function setMaxBet() {
+            currentBet = Math.max(minBet, Math.min(balance, maxBet, 5000));
+            document.getElementById('bet-amount-input').value = currentBet.toFixed(2);
+            updatePicksInfo();
+        }
+
+        async function placeBet() {
+            if (roundPhase !== 'BETTING_OPEN') {
+                showToast('Betting is closed for this round!', 'warning');
+                return;
+            }
+            if (selectedNumbers.length === 0) {
+                showToast('Please select at least 1 number to play!', 'warning');
+                return;
+            }
+            if (balance < currentBet) {
+                showToast('Insufficient balance! Click your balance (+500) to top up.', 'error');
+                return;
+            }
+
+            const picksToSubmit = [...selectedNumbers];
+            const btn = document.getElementById('bet-action-btn');
+            btn.disabled = true;
+
+            const handleBetResponse = (res) => {
+                btn.disabled = roundPhase !== 'BETTING_OPEN';
+                if (!res || !res.ok && res.status !== 'success') {
+                    showToast((res && (res.error || res.message)) || 'Could not place bet.', 'error');
+                    if (res && typeof res.balance === 'number') {
+                        balance = res.balance;
+                        updateBalanceDisplay();
+                    }
+                    return;
+                }
+
+                if (typeof res.balance === 'number') {
+                    balance = res.balance;
+                    updateBalanceDisplay();
+                }
+                if (Array.isArray(res.tickets)) {
+                    myActiveTickets = res.tickets;
+                }
+                if (typeof res.allBetsCount === 'number') {
+                    allBetsCount = res.allBetsCount;
+                }
+
+                // Auto-clear selected numbers right after placing bet
+                selectedNumbers = [];
+                KenoAudio.betPlaced();
+                updateGridUI();
+                updatePicksInfo();
+                updateActiveTicketsBadge();
+                updateRoundHeaderUI();
+                renderLiveBets();
+
+                showToast(`Bet of ${currentBet.toFixed(2)} ETB placed! Select more or wait for draw.`, 'success');
+            };
+
+            if (socket && socket.connected) {
+                socket.emit('bet:place', {
+                    playerId,
+                    displayName,
+                    picks: picksToSubmit,
+                    betAmount: currentBet
+                }, handleBetResponse);
+            } else {
+                try {
+                    const r = await fetch('/api/keno/bet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            playerId,
+                            displayName,
+                            picks: picksToSubmit,
+                            betAmount: currentBet
+                        })
+                    });
+                    const data = await r.json();
+                    handleBetResponse(data);
+                } catch (err) {
+                    btn.disabled = false;
+                    showToast('Network error placing bet.', 'error');
+                }
+            }
+        }
+
+        function topUpBalance() {
+            if (socket && socket.connected) {
+                socket.emit('balance:topup', { playerId, amount: 500 }, (res) => {
+                    if (res && res.ok) {
+                        balance = res.balance;
+                        updateBalanceDisplay();
+                        KenoAudio.betPlaced();
+                        showToast('+500.00 ETB added to balance!', 'success');
+                    }
+                });
+            } else {
+                fetch('/api/keno/topup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerId, amount: 500 })
+                }).then((r) => r.json()).then((res) => {
+                    if (res.balance !== undefined) {
+                        balance = res.balance;
+                        updateBalanceDisplay();
+                        showToast('+500.00 ETB added to balance!', 'success');
+                    }
+                }).catch(() => {});
+            }
+        }
+
+        // ============================================================
+        // 7. HEADER, TABS, RESULTS & CHAT RENDERERS
+        // ============================================================
+        function updateRoundHeaderUI() {
+            document.getElementById('round-number').innerText = `Round #${roundNumber}`;
+            const mins = Math.floor(roundTimer / 60);
+            const secs = roundTimer % 60;
+            document.getElementById('round-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            const badge = document.getElementById('round-status-badge');
+            const btn = document.getElementById('bet-action-btn');
+            const btnText = document.getElementById('bet-btn-text');
+
+            if (roundPhase === 'BETTING_OPEN') {
+                badge.innerText = 'Betting Open';
+                badge.className = 'px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] rounded font-bold uppercase tracking-wide';
+                btn.disabled = false;
+                btnText.innerText = myActiveTickets.length > 0 ? `PLACE ANOTHER BET (${myActiveTickets.length})` : 'PLACE BET';
+            } else if (roundPhase === 'BETTING_CLOSED') {
+                badge.innerText = 'Bets Closed';
+                badge.className = 'px-2 py-0.5 bg-red-500/20 border border-red-500/30 text-red-400 text-[10px] rounded font-bold uppercase tracking-wide';
+                btn.disabled = true;
+                btnText.innerText = 'BETS CLOSED';
+            } else if (roundPhase === 'DRAWING') {
+                badge.innerText = 'Drawing';
+                badge.className = 'px-2 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[10px] rounded font-bold uppercase tracking-wide';
+                btn.disabled = true;
+                btnText.innerText = 'DRAWING IN PROGRESS';
+            } else {
+                badge.innerText = 'Settled';
+                badge.className = 'px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[10px] rounded font-bold uppercase tracking-wide';
+                btn.disabled = true;
+                btnText.innerText = 'NEXT ROUND SOON';
+            }
+        }
+
+        function updateActiveTicketsBadge() {
+            const pill = document.getElementById('active-tickets-pill');
+            if (myActiveTickets.length > 0) {
+                pill.innerText = `${myActiveTickets.length} Active`;
+                pill.classList.remove('hidden');
+            } else {
+                pill.classList.add('hidden');
+            }
+        }
+
+        function updateBalanceDisplay() {
+            document.getElementById('user-balance').innerText = Number(balance || 0).toFixed(2);
+        }
+
+        function switchTab(tab) {
+            ['live', 'history', 'results'].forEach((t) => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = 'flex-1 py-3 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition';
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = 'flex-1 py-3 text-center text-amber-400 border-b-2 border-amber-400 transition';
+        }
+
+        function renderLiveBets() {
+            document.getElementById('live-total-bets').innerText = `All Bets: ${allBetsCount}`;
+            const container = document.getElementById('live-bets-list');
+            const items = publicTickets.length > 0 ? publicTickets : FALLBACK_PUBLIC_BETS;
+
+            container.innerHTML = items.map((t) => {
+                const chips = (t.picks || []).map((n) =>
+                    `<span class="w-6 h-6 bg-[#2d0909] border border-[#521313] text-amber-400 text-xs font-bold rounded flex items-center justify-center shrink-0">${n}</span>`
+                ).join('');
+                return `
+                    <div class="bg-[#1e0505] border border-[#3c0d0d] p-2.5 rounded-xl space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-amber-300 font-semibold">${escapeHtml(t.user || 'p***r')}</span>
+                            <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded">${Number(t.bet || 0).toFixed(0)} ETB</span>
+                        </div>
+                        <div class="flex space-x-1 overflow-x-auto py-0.5 scrollbar-none">${chips}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function switchHistorySub(sub) {
+            currentHistorySub = sub;
+            if (sub === 'my') {
+                document.getElementById('subtab-my').className = 'px-3 py-1 bg-amber-500 text-black font-bold text-xs rounded-lg';
+                document.getElementById('subtab-top').className = 'px-3 py-1 bg-[#2c0a0a] text-gray-300 font-bold text-xs rounded-lg';
+                renderMyBets();
+            } else {
+                document.getElementById('subtab-top').className = 'px-3 py-1 bg-amber-500 text-black font-bold text-xs rounded-lg';
+                document.getElementById('subtab-my').className = 'px-3 py-1 bg-[#2c0a0a] text-gray-300 font-bold text-xs rounded-lg';
+                renderTopBets();
+            }
+        }
+
+        function renderMyBets() {
+            const container = document.getElementById('history-items');
+            const pendingRows = myActiveTickets.map((t) => ({
+                id: t.roundId || roundNumber,
+                picks: t.picks || [],
+                hits: t.hits || [],
+                bet: Number(t.bet || 0),
+                win: Number(t.win || 0),
+                statusLabel: t.status === 'WON' ? `+${Number(t.win).toFixed(2)} ETB` : t.status
+            }));
+            const settledRows = myBetHistory.map((h) => ({
+                id: h.id,
+                picks: h.picks || [],
+                hits: h.hits || [],
+                bet: Number(h.bet || 0),
+                win: Number(h.win || 0),
+                statusLabel: h.win > 0 ? `+${Number(h.win).toFixed(2)} ETB` : 'Lost'
+            }));
+
+            const combined = [...pendingRows.filter((p) => !settledRows.some((s) => s.id === p.id)), ...settledRows];
+            if (combined.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs font-medium">No betting history found for today.</div>`;
+                return;
+            }
+
+            container.innerHTML = combined.map((b) => `
+                <div class="bg-[#1e0505] border border-[#3c0d0d] p-3 rounded-xl space-y-1.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-amber-400 font-bold">Round #${b.id}</span>
+                        <span class="font-bold ${b.win > 0 ? 'text-green-400' : 'text-gray-400'}">${escapeHtml(b.statusLabel)}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400">Bet: ${b.bet.toFixed(2)} ETB • Picks: ${b.picks.join(', ')}${b.hits.length ? ` • Hits: ${b.hits.join(', ')}` : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTopBets() {
+            const container = document.getElementById('history-items');
+            if (!leaders.length) {
+                container.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs font-medium">No top winners recorded yet.</div>`;
+                return;
+            }
+            container.innerHTML = leaders.slice(0, 10).map((l) => `
+                <div class="bg-[#1e0505] border border-[#3c0d0d] p-3 rounded-xl space-y-1">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-amber-400 font-bold">#${l.rank} ${escapeHtml(l.id)}</span>
+                        <span class="text-green-400 font-bold">+${Number(l.winAmount || 0).toLocaleString()} ETB</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400">Round #${l.roundId} • Bet ${Number(l.bet || 0).toFixed(0)} ETB</div>
+                </div>
+            `).join('');
+        }
+
+        function populateRecentResults() {
+            const freqMap = new Map();
+            statsList.forEach((s) => freqMap.set(s.num, s.count));
+
+            const hotRow = document.getElementById('hot-numbers-row');
+            const coldRow = document.getElementById('cold-numbers-row');
+
+            const hotSlice = (hotNumbers.length ? hotNumbers : [16, 30, 10]).slice(0, 3);
+            const coldSlice = (coldNumbers.length ? coldNumbers : [27, 47, 25]).slice(0, 3);
+
+            hotRow.innerHTML = hotSlice.map((n) => `
+                <div class="flex flex-col items-center">
+                    <span class="w-7 h-7 bg-red-950 border border-red-800 text-amber-400 text-xs font-bold rounded flex items-center justify-center">${n}</span>
+                    <span class="text-[9px] text-gray-400 mt-0.5">${freqMap.get(n) ?? 0}x</span>
+                </div>
+            `).join('');
+
+            coldRow.innerHTML = coldSlice.map((n) => `
+                <div class="flex flex-col items-center">
+                    <span class="w-7 h-7 bg-blue-950 border border-blue-800 text-amber-400 text-xs font-bold rounded flex items-center justify-center">${n}</span>
+                    <span class="text-[9px] text-gray-400 mt-0.5">${freqMap.get(n) ?? 0}x</span>
+                </div>
+            `).join('');
+
+            const latest = pastResults[0];
+            if (latest) {
+                document.getElementById('recent-result-round').innerText = `Round #${latest.id}`;
+                document.getElementById('recent-result-time').innerText = latest.time || 'Just now';
+            }
+
+            const container = document.getElementById('recent-drawn-grid');
+            if (!container) return;
+            const nums = latest && Array.isArray(latest.nums) ? latest.nums : drawnNumbersThisRound.slice(0, 20);
+            container.innerHTML = nums.map((n) =>
+                `<div class="w-full aspect-square bg-[#2d0909] border border-[#521313] text-amber-400 text-[10px] font-bold rounded flex items-center justify-center">${n}</div>`
+            ).join('');
+        }
+
+        // ============================================================
+        // 8. MODALS, CHAT & SETTINGS HELPERS
+        // ============================================================
+        function openMenu() { document.getElementById('menu-modal').classList.remove('hidden'); }
+        function closeMenu() { document.getElementById('menu-modal').classList.add('hidden'); }
+
+        function toggleSetting(key, val) {
+            settings[key] = Boolean(val);
+            localStorage.setItem('shamo_keno_' + key, String(settings[key]));
+            if (key === 'music') KenoAudio.syncMusic();
+        }
+
+        function openChat() {
+            isChatOpen = true;
+            unreadChatCount = 0;
+            updateChatBadge();
+            document.getElementById('chat-modal').classList.remove('hidden');
+            renderChatMessages();
+            setTimeout(() => document.getElementById('chat-input').focus(), 50);
+        }
+
+        function closeChat() {
+            isChatOpen = false;
+            document.getElementById('chat-modal').classList.add('hidden');
+        }
+
+        function updateChatBadge() {
+            const badge = document.getElementById('chat-badge');
+            if (unreadChatCount > 0) {
+                badge.innerText = unreadChatCount > 9 ? '9+' : String(unreadChatCount);
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function renderChatMessages() {
+            const box = document.getElementById('chat-messages-list');
+            if (!box) return;
+            box.innerHTML = chatMessages.map((m) => `
+                <div class="bg-[#2d0909]/70 border border-[#521313] px-3 py-2 rounded-xl text-xs">
+                    <div class="flex justify-between items-center mb-0.5">
+                        <span class="text-amber-400 font-bold">${escapeHtml(m.user || 'player')}</span>
+                        <span class="text-[10px] text-gray-500">${escapeHtml(m.time || '')}</span>
+                    </div>
+                    <p class="text-gray-200 break-words">${escapeHtml(m.text || '')}</p>
+                </div>
+            `).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendChatMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            if (socket && socket.connected) {
+                socket.emit('chat:send', { playerId, text });
+            } else {
+                showToast('Reconnecting to live chat...', 'warning');
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        let toastTimer = null;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            if (type === 'success') {
+                iconEl.className = 'fa-solid fa-circle-check text-green-400';
+            } else if (type === 'error') {
+                iconEl.className = 'fa-solid fa-triangle-exclamation text-red-400';
+            } else {
+                iconEl.className = 'fa-solid fa-circle-info text-amber-400';
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

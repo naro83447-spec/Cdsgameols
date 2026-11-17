@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<!-- LITEGAMES_PLAYER_SYNC -->
+<script>
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('playerId') || localStorage.getItem('litegames_player_id');
+    if (pid) {
+      ['litegames_player_id','aviator_player_id','shamo_keno_player_id','shamo_rocket_player_id','mh5_player_id','jetx_player_id','dragons_player_id'].forEach(function(k) {
+        localStorage.setItem(k, pid);
+      });
+    }
+    var pname = params.get('displayName') || localStorage.getItem('litegames_player_name');
+    if (pname) {
+      ['litegames_player_name','shamo_keno_name','shamo_rocket_name','jetx_display_name'].forEach(function(k) {
+        localStorage.setItem(k, pname);
+      });
+    }
+    if (window.parent && window.parent !== window) {
+      var origFetch = window.fetch;
+      window.fetch = function() {
+        var reqUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
+        return origFetch.apply(this, arguments).then(function(res) {
+          try {
+            var u = reqUrl;
+            if (u.indexOf('/api/') !== -1) {
+              setTimeout(function() {
+                window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, '*');
+              }, 120);
+            }
+          } catch(_) {}
+          return res;
+        });
+      };
+    } else {
+      window.addEventListener('DOMContentLoaded', function() {
+        var btn = document.createElement('a');
+        btn.href = '/';
+        btn.innerHTML = '&#8592; Lite Games';
+        btn.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
+        document.body.appendChild(btn);
+      });
+    }
+  } catch (e) {}
+})();
+</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Aviator - Spribe Official Game</title>
+  <meta name="description" content="Real-time multiplayer Aviator crash game powered by a Provably Fair SHA-512 backend." />
+  <meta property="og:title" content="Aviator - Spribe Official Game" />
+  <meta property="og:description" content="Real-time multiplayer Aviator crash game powered by a Provably Fair SHA-512 backend." />
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Lobster&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      background-color: #0e0f11;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    .aviator-logo {
+      font-family: 'Lobster', cursive;
+      color: #e50914;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 10px rgba(229, 9, 20, 0.35);
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #141517;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2c2d30;
+      border-radius: 999px;
+    }
+    .spribe-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    .spribe-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .spribe-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #2b2c30;
+      transition: .2s;
+      border-radius: 999px;
+      border: 1px solid #3a3b40;
+    }
+    .spribe-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #9ea0a6;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .spribe-slider {
+      background-color: #28a745;
+      border-color: #34c759;
+    }
+    input:checked + .spribe-slider:before {
+      transform: translateX(16px);
+      background-color: #ffffff;
+    }
+
+    .btn-bet-green {
+      background: linear-gradient(180deg, #34c759 0%, #28a745 100%);
+      border: 1px solid #5ce07d;
+      box-shadow: 0 4px 14px rgba(40, 167, 69, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+    .btn-bet-green:active {
+      transform: scale(0.98);
+    }
+    .btn-bet-red {
+      background: linear-gradient(180deg, #e53935 0%, #c62828 100%);
+      border: 1px solid #ff6f60;
+      box-shadow: 0 4px 14px rgba(229, 57, 53, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .btn-bet-orange {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      border: 1px solid #fcd34d;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+
+    .mult-blue { color: #34b4ff; }
+    .mult-purple { color: #913ef8; }
+    .mult-pink { color: #c017b4; }
+
+    .badge-blue { background-color: rgba(52, 180, 255, 0.14); color: #34b4ff; border: 1px solid rgba(52, 180, 255, 0.3); }
+    .badge-purple { background-color: rgba(145, 62, 248, 0.16); color: #a966ff; border: 1px solid rgba(145, 62, 248, 0.35); }
+    .badge-pink { background-color: rgba(192, 23, 180, 0.18); color: #e23ad6; border: 1px solid rgba(192, 23, 180, 0.4); }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 14px rgba(52, 180, 255, 0.35)); }
+      50% { filter: drop-shadow(0 0 24px rgba(145, 62, 248, 0.55)); }
+    }
+    .flying-glow {
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[#0e0f11] text-white flex justify-center min-h-screen">
+
+  <div id="app" class="w-full max-w-[480px] bg-[#0e0f11] flex flex-col min-h-screen relative shadow-2xl border-x border-[#1c1d20]">
+
+    <!-- 1. TOP HEADER BAR -->
+    <header class="h-12 px-3 bg-[#141517] flex items-center justify-between border-b border-[#1f2024] sticky top-0 z-30">
+      <div class="flex items-center gap-2">
+        <span class="aviator-logo text-[25px] leading-none select-none">Aviator</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button id="balanceBtn" onclick="openTopUpModal()" title="Tap to add demo ETB" class="flex items-center gap-1 bg-[#1b1c1f] hover:bg-[#232529] px-2.5 py-1 rounded-full border border-[#2a2b30] transition">
+          <span id="balanceDisplay" class="text-[#38d354] font-bold text-[14px] tracking-tight">1,000.00</span>
+          <span class="text-[#8e9096] text-[12px] font-medium">ETB</span>
+        </button>
+
+        <button id="quickAudioBtn" onclick="toggleQuickAudio()" title="Toggle Game Sound & Music" class="w-8 h-8 rounded-full bg-[#1b1c1f] hover:bg-[#26282c] flex items-center justify-center text-[#38d354] hover:text-white transition text-sm">
+          🔊
+        </button>
+
+        <button id="menuToggleBtn" onclick="toggleMenuDrawer()" class="w-8 h-8 rounded-full bg-[#1b1c1f] hover:bg-[#26282c] flex items-center justify-center text-[#9ea0a6] hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+
+        <button id="chatToggleBtn" onclick="toggleChatDrawer()" class="relative w-8 h-8 rounded-full bg-[#1b1c1f] hover:bg-[#26282c] flex items-center justify-center text-[#9ea0a6] hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          <span id="chatUnreadDot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#e50914]"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. MULTIPLIER HISTORY RIBBON -->
+    <div class="relative bg-[#0e0f11] px-2 py-1.5 flex items-center justify-between gap-1.5 z-20">
+      <div id="historyRibbon" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 pr-1 flex-1" style="scrollbar-width: none;"></div>
+      <button onclick="toggleHistoryDropdown()" class="shrink-0 w-7 h-6 rounded-full bg-[#1b1c1e] hover:bg-[#2a2b2f] border border-[#2c2d32] flex items-center justify-center text-[#9ea0a6] text-xs font-bold tracking-widest">
+        •••
+      </button>
+
+      <div id="historyDropdown" class="hidden absolute top-1 left-2 right-2 bg-[#1b1c1e] border border-[#2d2e34] rounded-2xl p-3 shadow-2xl z-30">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-[13px] font-medium text-[#b0b2b8]">Round History</span>
+          <button onclick="toggleHistoryDropdown()" class="w-6 h-6 rounded-full bg-[#26272b] flex items-center justify-center text-[#9ea0a6] hover:text-white text-xs">✕</button>
+        </div>
+        <div id="historyGrid" class="grid grid-cols-7 gap-y-2 gap-x-1 text-center text-[12px] font-bold"></div>
+      </div>
+    </div>
+
+    <!-- 3. MAIN GAME CANVAS (SUNBURST & FLIGHT ARENA) -->
+    <div class="px-2">
+      <div id="arenaContainer" class="relative w-full h-[215px] sm:h-[235px] bg-[#090a0c] rounded-2xl overflow-hidden border border-[#1f2024] shadow-inner">
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <div id="toastContainer" class="absolute top-2.5 left-2.5 right-2.5 flex flex-col gap-1.5 pointer-events-none z-20"></div>
+
+        <!-- WAITING STATE OVERLAY -->
+        <div id="waitingOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4">
+          <div class="flex items-center gap-3 mb-1.5">
+            <span class="font-black italic text-[22px] tracking-tighter text-[#e50914]">UFC</span>
+            <span class="h-6 w-[1px] bg-[#3a3b40]"></span>
+            <span class="aviator-logo text-[22px] text-[#e50914]">Aviator</span>
+          </div>
+          <div class="text-[11px] font-extrabold tracking-[0.14em] text-white uppercase mb-2">OFFICIAL PARTNERS</div>
+
+          <div class="w-48 h-1.5 bg-[#26272b] rounded-full overflow-hidden mb-3">
+            <div id="waitingProgressBar" class="h-full bg-[#e50914] rounded-full transition-all duration-75" style="width: 100%;"></div>
+          </div>
+
+          <div class="bg-[#141814]/90 border border-[#2a3f2a] rounded-xl px-3.5 py-2 flex flex-col items-center shadow-lg">
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">S</span>
+              <span class="text-white font-bold text-[13px] tracking-wide">SPRIBE</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-[#1b2e1e] border border-[#2e5934] rounded-full px-2.5 py-0.5">
+              <span class="text-[#4ade80] text-[10px] font-semibold">Official Game</span>
+              <span class="w-3.5 h-3.5 rounded-full bg-[#28a745] text-black flex items-center justify-center text-[9px] font-black">✓</span>
+            </div>
+            <span class="text-[#8e9096] text-[9px] mt-1">Since 2019</span>
+          </div>
+        </div>
+
+        <!-- FLYING STATE MULTIPLIER DISPLAY -->
+        <div id="flyingOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div id="liveMultiplierText" class="text-[48px] sm:text-[54px] font-extrabold text-white tracking-tight leading-none flying-glow">
+            1.00x
+          </div>
+        </div>
+
+        <!-- CRASHED STATE DISPLAY -->
+        <div id="crashedOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-black/25">
+          <div class="text-[17px] font-bold tracking-wider text-white uppercase mb-1 drop-shadow">FLEW AWAY!</div>
+          <div id="crashedMultiplierText" class="text-[48px] sm:text-[54px] font-extrabold text-[#e50914] tracking-tight leading-none drop-shadow-[0_2px_16px_rgba(229,9,20,0.5)]">
+            1.77x
+          </div>
+        </div>
+
+        <div id="livePlayersPill" class="absolute bottom-2.5 right-2.5 bg-[#141518]/90 backdrop-blur-sm border border-[#2a2b30] rounded-full pl-1 pr-2.5 py-0.5 flex items-center gap-1.5 pointer-events-none">
+          <div class="flex -space-x-1.5">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Milo" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
+          </div>
+          <span id="activeFlightCount" class="text-[11px] font-bold text-white">435</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. DUAL BETTING CONTROL PANELS -->
+    <div class="px-2 pt-2 flex flex-col gap-2">
+
+      <!-- PANEL 1 -->
+      <div id="betPanel1" class="bg-[#1b1c1d] rounded-2xl p-2.5 border border-[#26272b] relative">
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-6"></div>
+          <div class="bg-[#111214] p-0.5 rounded-full flex items-center border border-[#25262a]">
+            <button id="p1ModeBet" onclick="setPanelMode(1, 'bet')" class="px-6 py-1 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition">Bet</button>
+            <button id="p1ModeAuto" onclick="setPanelMode(1, 'auto')" class="px-6 py-1 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition">Auto</button>
+          </div>
+          <button id="togglePanel2Btn" onclick="toggleSecondPanel()" title="Toggle Second Bet Panel" class="w-7 h-7 rounded-lg bg-[#25262a] hover:bg-[#313338] border border-[#34363c] flex items-center justify-center text-[#9ea0a6] hover:text-white transition">
+            <span id="togglePanel2Icon" class="text-sm font-bold leading-none">−</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-12 gap-2 items-stretch">
+          <div class="col-span-5 flex flex-col gap-1.5">
+            <div class="bg-[#111214] border border-[#2a2b30] rounded-full h-9 px-1.5 flex items-center justify-between">
+              <button onclick="adjustBetAmount(1, -1)" class="w-6 h-6 rounded-full bg-[#25262a] hover:bg-[#32343a] flex items-center justify-center text-white font-bold text-sm">−</button>
+              <input id="p1AmountInput" type="number" step="1" min="1" value="4.00" onchange="formatBetInput(1)" class="w-16 bg-transparent text-center text-white font-bold text-[14px] focus:outline-none" />
+              <button onclick="adjustBetAmount(1, 1)" class="w-6 h-6 rounded-full bg-[#25262a] hover:bg-[#32343a] flex items-center justify-center text-white font-bold text-sm">+</button>
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+              <button onclick="setBetPreset(1, 5)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">5</button>
+              <button onclick="setBetPreset(1, 10)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">10</button>
+              <button onclick="setBetPreset(1, 50)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">50</button>
+              <button onclick="setBetPreset(1, 100)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">100</button>
+            </div>
+          </div>
+
+          <div class="col-span-7">
+            <button id="p1ActionBtn" onclick="handlePanelAction(1)" class="w-full h-full min-h-[76px] rounded-2xl btn-bet-green flex flex-col items-center justify-center text-white transition">
+              <span id="p1ActionTitle" class="text-[19px] font-bold leading-tight">Bet</span>
+              <span id="p1ActionSub" class="text-[15px] font-semibold opacity-95 mt-0.5">4.00 ETB</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="p1AutoRow" class="mt-2 pt-2 border-t border-[#26272b] flex items-center justify-between gap-2 text-[11px]">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[#9ea0a6] font-medium">Auto Bet</span>
+            <label class="spribe-switch">
+              <input id="p1AutoBetToggle" type="checkbox" onchange="toggleAutoBet(1)" />
+              <span class="spribe-slider"></span>
+            </label>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <span class="text-[#9ea0a6] font-medium">Auto Cash Out</span>
+            <label class="spribe-switch">
+              <input id="p1AutoCashToggle" type="checkbox" onchange="syncPanelAutoCash(1)" />
+              <span class="spribe-slider"></span>
+            </label>
+            <div class="bg-[#111214] border border-[#2a2b30] rounded-full px-2 py-0.5 flex items-center gap-1">
+              <input id="p1AutoCashVal" type="number" step="0.1" min="1.01" value="1.50" onchange="syncPanelAutoCash(1)" class="w-10 bg-transparent text-white font-bold text-[12px] text-center focus:outline-none" />
+              <span class="text-[#6c6e75] text-[10px]">x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2 -->
+      <div id="betPanel2" class="bg-[#1b1c1d] rounded-2xl p-2.5 border border-[#26272b] relative">
+        <div class="flex items-center justify-center mb-2">
+          <div class="bg-[#111214] p-0.5 rounded-full flex items-center border border-[#25262a]">
+            <button id="p2ModeBet" onclick="setPanelMode(2, 'bet')" class="px-6 py-1 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition">Bet</button>
+            <button id="p2ModeAuto" onclick="setPanelMode(2, 'auto')" class="px-6 py-1 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition">Auto</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-2 items-stretch">
+          <div class="col-span-5 flex flex-col gap-1.5">
+            <div class="bg-[#111214] border border-[#2a2b30] rounded-full h-9 px-1.5 flex items-center justify-between">
+              <button onclick="adjustBetAmount(2, -1)" class="w-6 h-6 rounded-full bg-[#25262a] hover:bg-[#32343a] flex items-center justify-center text-white font-bold text-sm">−</button>
+              <input id="p2AmountInput" type="number" step="1" min="1" value="4.00" onchange="formatBetInput(2)" class="w-16 bg-transparent text-center text-white font-bold text-[14px] focus:outline-none" />
+              <button onclick="adjustBetAmount(2, 1)" class="w-6 h-6 rounded-full bg-[#25262a] hover:bg-[#32343a] flex items-center justify-center text-white font-bold text-sm">+</button>
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+              <button onclick="setBetPreset(2, 5)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">5</button>
+              <button onclick="setBetPreset(2, 10)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">10</button>
+              <button onclick="setBetPreset(2, 50)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">50</button>
+              <button onclick="setBetPreset(2, 100)" class="bg-[#25262a] hover:bg-[#303237] rounded-full py-1 text-[11px] font-semibold text-[#b0b2b8] hover:text-white transition">100</button>
+            </div>
+          </div>
+
+          <div class="col-span-7">
+            <button id="p2ActionBtn" onclick="handlePanelAction(2)" class="w-full h-full min-h-[76px] rounded-2xl btn-bet-green flex flex-col items-center justify-center text-white transition">
+              <span id="p2ActionTitle" class="text-[19px] font-bold leading-tight">Bet</span>
+              <span id="p2ActionSub" class="text-[15px] font-semibold opacity-95 mt-0.5">4.00 ETB</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="p2AutoRow" class="mt-2 pt-2 border-t border-[#26272b] flex items-center justify-between gap-2 text-[11px]">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[#9ea0a6] font-medium">Auto Bet</span>
+            <label class="spribe-switch">
+              <input id="p2AutoBetToggle" type="checkbox" onchange="toggleAutoBet(2)" />
+              <span class="spribe-slider"></span>
+            </label>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <span class="text-[#9ea0a6] font-medium">Auto Cash Out</span>
+            <label class="spribe-switch">
+              <input id="p2AutoCashToggle" type="checkbox" onchange="syncPanelAutoCash(2)" />
+              <span class="spribe-slider"></span>
+            </label>
+            <div class="bg-[#111214] border border-[#2a2b30] rounded-full px-2 py-0.5 flex items-center gap-1">
+              <input id="p2AutoCashVal" type="number" step="0.1" min="1.01" value="2.00" onchange="syncPanelAutoCash(2)" class="w-10 bg-transparent text-white font-bold text-[12px] text-center focus:outline-none" />
+              <span class="text-[#6c6e75] text-[10px]">x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5. BOTTOM LIVE BETS & LEADERBOARD PANEL -->
+    <div class="px-2 pt-2 pb-4 flex-1 flex flex-col">
+      <div class="bg-[#1b1c1d] rounded-2xl border border-[#26272b] flex flex-col flex-1 overflow-hidden">
+
+        <div class="p-2 pb-1.5">
+          <div class="bg-[#111214] p-0.5 rounded-full grid grid-cols-3 border border-[#25262a]">
+            <button id="tabAllBets" onclick="switchBottomTab('all')" class="py-1.5 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition">All Bets</button>
+            <button id="tabPrevious" onclick="switchBottomTab('previous')" class="py-1.5 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition">Previous</button>
+            <button id="tabTop" onclick="switchBottomTab('top')" class="py-1.5 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition">Top</button>
+          </div>
+        </div>
+
+        <!-- TAB 1: ALL BETS -->
+        <div id="contentAllBets" class="flex flex-col flex-1">
+          <div class="px-3 py-2 flex items-center justify-between border-b border-[#26272b]">
+            <div>
+              <div class="flex items-center gap-1.5 mb-1">
+                <div class="flex -space-x-1.5">
+                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P1" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
+                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P2" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
+                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P3" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
+                </div>
+                <span id="allBetsCounter" class="text-[12px] font-bold text-white">435/435 <span class="text-[#8e9096] font-normal">Bets</span></span>
+              </div>
+              <div class="w-36 h-1 bg-[#28292e] rounded-full overflow-hidden">
+                <div id="allBetsProgress" class="h-full bg-[#38d354] transition-all duration-200" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <div class="text-right">
+              <div id="totalWinEtb" class="text-[16px] font-extrabold text-white leading-tight">0.00</div>
+              <div class="text-[11px] text-[#8e9096]">Total win ETB</div>
+            </div>
+          </div>
+
+          <div class="px-3 py-1.5 grid grid-cols-12 text-[11px] text-[#7c7e85] font-medium">
+            <div class="col-span-5">Player</div>
+            <div class="col-span-3 text-right">Bet ETB</div>
+            <div class="col-span-2 text-center">X</div>
+            <div class="col-span-2 text-right">Win ETB</div>
+          </div>
+
+          <div id="liveBetsList" class="px-2 pb-2 flex flex-col gap-1 max-h-[340px] overflow-y-auto"></div>
+        </div>
+
+        <!-- TAB 2: PREVIOUS ROUND -->
+        <div id="contentPrevious" class="hidden flex-col flex-1">
+          <div class="mx-3 my-2 py-2.5 bg-[#141517] rounded-xl border border-[#25262a] flex flex-col items-center">
+            <span class="text-[11px] text-[#8e9096] mb-0.5">Round Result</span>
+            <span id="prevRoundResultText" class="text-[26px] font-extrabold mult-blue leading-none">1.77x</span>
+          </div>
+          <div class="px-3 py-1 grid grid-cols-12 text-[11px] text-[#7c7e85] font-medium">
+            <div class="col-span-5">Player</div>
+            <div class="col-span-3 text-right">Bet ETB</div>
+            <div class="col-span-2 text-center">X</div>
+            <div class="col-span-2 text-right">Win ETB</div>
+          </div>
+          <div id="previousBetsList" class="px-2 pb-2 flex flex-col gap-1 max-h-[310px] overflow-y-auto"></div>
+        </div>
+
+        <!-- TAB 3: TOP LEADERBOARD -->
+        <div id="contentTop" class="hidden flex-col flex-1 px-2.5 pb-2">
+          <div class="flex flex-col gap-1.5 my-1.5">
+            <div class="bg-[#111214] p-0.5 rounded-full grid grid-cols-3 border border-[#25262a] text-[11px]">
+              <button onclick="setTopFilter('type', 'x', this)" class="top-type-btn py-1 rounded-full bg-[#2c2d31] text-white font-semibold">X</button>
+              <button onclick="setTopFilter('type', 'win', this)" class="top-type-btn py-1 rounded-full text-[#8e9096] font-semibold">Win</button>
+              <button onclick="setTopFilter('type', 'rounds', this)" class="top-type-btn py-1 rounded-full text-[#8e9096] font-semibold">Rounds</button>
+            </div>
+            <div class="bg-[#111214] p-0.5 rounded-full grid grid-cols-3 border border-[#25262a] text-[11px]">
+              <button onclick="setTopFilter('period', 'day', this)" class="top-period-btn py-1 rounded-full bg-[#2c2d31] text-white font-semibold">Day</button>
+              <button onclick="setTopFilter('period', 'month', this)" class="top-period-btn py-1 rounded-full text-[#8e9096] font-semibold">Month</button>
+              <button onclick="setTopFilter('period', 'year', this)" class="top-period-btn py-1 rounded-full text-[#8e9096] font-semibold">Year</button>
+            </div>
+          </div>
+
+          <div id="topLeaderboardList" class="flex flex-col gap-2 max-h-[340px] overflow-y-auto pt-1"></div>
+        </div>
+
+        <div class="mt-auto px-3 py-2 bg-[#141517] border-t border-[#242529] flex items-center justify-between text-[11px] text-[#7c7e85]">
+          <button onclick="openProvablyFairModal()" class="flex items-center gap-1.5 hover:text-white transition">
+            <span class="text-[#38d354]">🛡️</span>
+            <span>Provably Fair Game</span>
+          </button>
+          <div>Powered by <span class="font-extrabold text-[#b0b2b8] tracking-wide">SPRIBE</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A. HAMBURGER MENU DROPDOWN DRAWER -->
+    <div id="menuDrawer" class="hidden fixed inset-0 z-50 flex justify-center bg-black/60 backdrop-blur-[1px]" onclick="if(event.target===this) toggleMenuDrawer()">
+      <div class="w-full max-w-[460px] mt-12 mx-2 h-fit bg-[#1e1f22] border border-[#2e3035] rounded-2xl shadow-2xl overflow-hidden text-[13px]">
+        <div class="p-3.5 bg-[#25262a] flex items-center justify-between border-b border-[#32343a]">
+          <div class="flex items-center gap-3">
+            <img id="userAvatarImg" src="https://api.dicebear.com/7.x/identicon/svg?seed=MercedesGold&backgroundColor=eab308" alt="Avatar" class="w-11 h-11 rounded-full border-2 border-[#eab308] bg-[#eab308]" />
+            <div>
+              <div id="menuPlayerName" class="font-bold text-white text-[15px]">d***u</div>
+              <div class="text-[11px] text-[#38d354]">Verified Player</div>
+            </div>
+          </div>
+          <button onclick="cycleUserAvatar()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1b1c1f] hover:bg-[#2f3136] border border-[#3a3c42] text-[11px] text-[#b0b2b8] hover:text-white transition">
+            <span>👤</span>
+            <span class="text-left leading-tight">Change<br/>Avatar</span>
+          </button>
+        </div>
+
+        <div class="divide-y divide-[#2a2b30]">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3 text-[#d0d2d6]"><span>🔊</span><span>Sound</span></div>
+            <label class="spribe-switch"><input id="soundToggle" type="checkbox" checked onchange="toggleAudioSetting('sound')" /><span class="spribe-slider"></span></label>
+          </div>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3 text-[#d0d2d6]"><span>🎵</span><span>Music</span></div>
+            <label class="spribe-switch"><input id="musicToggle" type="checkbox" checked onchange="toggleAudioSetting('music')" /><span class="spribe-slider"></span></label>
+          </div>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3 text-[#d0d2d6]"><span>🛩️</span><span>Animation</span></div>
+            <label class="spribe-switch"><input id="animToggle" type="checkbox" checked /><span class="spribe-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="h-2 bg-[#141517]"></div>
+
+        <div class="divide-y divide-[#2a2b30] text-[#d0d2d6]">
+          <button onclick="openSimpleInfoModal('Free Bets', 'No active Free Bets right now. Watch the Live Chat for Admin Rain drops of 20.00 ETB!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>⭐</span><span>Free Bets</span></button>
+          <button onclick="openMyBetHistoryModal()" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>🕒</span><span>My Bet History</span></button>
+          <button onclick="openSimpleInfoModal('Game Limits', 'Minimum Bet: 1.00 ETB • Maximum Bet: 10,000.00 ETB • Maximum Win per Bet: 500,000.00 ETB')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>💵</span><span>Game Limits</span></button>
+          <button onclick="openSimpleInfoModal('How To Play', '1. Place one or two bets before takeoff.\n2. Watch the lucky plane fly and the multiplier grow.\n3. Press Cash Out before the plane flies away to multiply your bet!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>❓</span><span>How To Play</span></button>
+          <button onclick="openSimpleInfoModal('Game Rules', 'Aviator uses a Provably Fair cryptographic RNG (SHA-512) with 97% RTP. Each round result is generated on the server from Server Seed + first 3 Player Client Seeds.')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>📜</span><span>Game Rules</span></button>
+          <button onclick="toggleMenuDrawer(); openProvablyFairModal();" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>🛡️</span><span>Provably Fair Settings</span></button>
+        </div>
+
+        <button onclick="toggleMenuDrawer()" class="w-full py-3 bg-[#17181a] hover:bg-[#222327] text-[#9ea0a6] hover:text-white flex items-center justify-center gap-2 border-t border-[#2a2b30] font-medium">
+          <span>🏠</span><span>Home</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- B. LIVE CHAT DRAWER -->
+    <div id="chatDrawer" class="hidden fixed inset-0 z-50 flex justify-center bg-black/75" onclick="if(event.target===this) toggleChatDrawer()">
+      <div class="w-full max-w-[480px] bg-[#141517] flex flex-col h-full border-x border-[#26272b]">
+        <div class="h-12 px-3 bg-[#1b1c1f] border-b border-[#2a2b30] flex items-center justify-between">
+          <button onclick="toggleChatDrawer()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-white">‹</button>
+          <div class="text-[13px] font-semibold text-[#b0b2b8]">
+            Online: <span id="onlinePlayersCount" class="text-[#38d354] font-bold">1080</span>
+          </div>
+          <button onclick="toggleChatRulesModal()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-[#b0b2b8] hover:text-white font-serif italic font-bold">i</button>
+        </div>
+
+        <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
+          <div class="bg-[#23471e] border border-[#3a7531] rounded-2xl p-3 shadow-lg">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-[#1d63b8] flex items-center justify-center font-bold text-xs">B</div>
+                <span class="text-[#f59e0b] font-bold text-xs">Admin</span>
+                <span class="bg-[#e50914] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Admin</span>
+                <span class="text-[10px] text-[#a3c29e]">19:19</span>
+              </div>
+              <div class="flex items-center gap-1 text-[#d4f7cf] font-bold text-xs">
+                <span>🪙</span>
+                <span>20.00 ETB</span>
+              </div>
+            </div>
+
+            <div class="bg-[#183314] rounded-xl p-2.5 border border-[#2c5925]">
+              <div class="flex items-center justify-between text-xs mb-2">
+                <div class="flex items-center gap-1.5 text-[#a3c29e] font-semibold">
+                  <span>🌧️</span><span>Rain</span>
+                </div>
+                <span id="rainQuantityText" class="text-[#a3c29e]">Quantity: <strong class="text-white">3 / 25</strong></span>
+              </div>
+              <button id="claimRainBtn" onclick="claimRainBonus()" class="w-full py-2 rounded-full bg-[#38d354] hover:bg-[#2eb846] text-black font-extrabold text-xs transition shadow">
+                Claim 20.00 ETB Free Bet
+              </button>
+            </div>
+            <div class="text-center text-[11px] text-[#c7ebc3] mt-2 font-medium">
+              Total: <strong class="text-white">500.00 ETB</strong>
+            </div>
+          </div>
+          <div id="chatDynamicMessages" class="flex flex-col gap-2.5"></div>
+        </div>
+
+        <form onsubmit="sendChatMessage(event)" class="p-2.5 bg-[#1b1c1f] border-t border-[#2a2b30] flex flex-col gap-1.5">
+          <div class="flex items-center gap-2 bg-[#111214] border border-[#2c2d32] rounded-2xl px-3 py-2">
+            <input id="chatInput" type="text" maxlength="160" oninput="updateChatCharCount()" placeholder="Your message..." class="flex-1 bg-transparent text-white text-[13px] focus:outline-none" />
+            <span id="chatCharCount" class="text-[11px] text-[#6c6e75]">160</span>
+            <button type="submit" class="text-[#38d354] hover:text-white font-bold text-sm px-1">➤</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- C. CHAT RULES MODAL -->
+    <div id="chatRulesModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4" onclick="if(event.target===this) toggleChatRulesModal()">
+      <div class="w-full max-w-[400px] bg-[#1e1f22] border border-[#2e3035] rounded-2xl overflow-hidden shadow-2xl">
+        <div class="px-4 py-3 bg-[#25262a] flex items-center justify-between border-b border-[#32343a]">
+          <span class="font-bold text-[13px] tracking-wide">CHAT RULES</span>
+          <button onclick="toggleChatRulesModal()" class="text-[#9ea0a6] hover:text-white">✕</button>
+        </div>
+        <ul class="p-4 flex flex-col gap-3 text-[13px] text-[#d0d2d6]">
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Do not spam or use excessive capital letters when chatting.</span></li>
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Be respectful; do not harass or be offensive to other players.</span></li>
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Do not share personal information of yourself or other players.</span></li>
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Do not beg or ask for loans, rains, or tips.</span></li>
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Avoid behavior that may be seen as potential scams.</span></li>
+          <li class="flex items-start gap-2"><span class="text-[#e50914] font-bold">›</span><span>Do not engage in any form of advertising, trading, selling, buying, or offering services.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- D. PROVABLY FAIR MODAL -->
+    <div id="provablyFairModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3" onclick="if(event.target===this) closeProvablyFairModal()">
+      <div class="w-full max-w-[420px] bg-[#1b1c1e] border border-[#2e3035] rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="px-4 py-3 bg-[#242529] border-b border-[#32343a] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span id="pfRoundTitle" class="font-bold text-[14px]">ROUND 1022302</span>
+            <span id="pfResultPill" class="px-2 py-0.5 rounded-full text-[11px] font-bold badge-pink">1,033.61x</span>
+          </div>
+          <button onclick="closeProvablyFairModal()" class="text-[#9ea0a6] hover:text-white text-sm">✕</button>
+        </div>
+
+        <div class="p-4 overflow-y-auto flex flex-col gap-3.5 text-[12px]">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">🖥️</span>
+              <div>
+                <div class="font-bold text-white">Server Seed:</div>
+                <div class="text-[11px] text-[#8e9096]">Generated on our side</div>
+              </div>
+            </div>
+            <div id="pfServerSeed" class="bg-[#111214] border border-[#28292e] rounded-xl p-2.5 font-mono text-[11px] text-[#d0d2d6] break-all"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-lg">💻</span>
+              <div>
+                <div class="font-bold text-white">Client Seed:</div>
+                <div class="text-[11px] text-[#8e9096]">Generated on players side</div>
+              </div>
+            </div>
+            <div id="pfClientSeeds" class="flex flex-col gap-1.5"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">🔐</span>
+              <div>
+                <div class="font-bold text-white">Combined SHA512 Hash:</div>
+                <div class="text-[11px] text-[#8e9096]">Above seeds combined and converted to SHA512 Hash. This is your game result</div>
+              </div>
+            </div>
+            <div id="pfHash" class="bg-[#111214] border border-[#28292e] rounded-xl p-2.5 font-mono text-[11px] text-[#d0d2d6] break-all"></div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-[#111214] border border-[#28292e] rounded-xl p-2">
+              <div class="text-[10px] text-[#8e9096] mb-0.5">Hex</div>
+              <div id="pfHex" class="font-mono text-[11px] text-white truncate"></div>
+            </div>
+            <div class="bg-[#111214] border border-[#28292e] rounded-xl p-2">
+              <div class="text-[10px] text-[#8e9096] mb-0.5">Decimal</div>
+              <div id="pfDecimal" class="font-mono text-[11px] text-white truncate"></div>
+            </div>
+            <div class="bg-[#111214] border border-[#28292e] rounded-xl p-2">
+              <div class="text-[10px] text-[#8e9096] mb-0.5">Result</div>
+              <div id="pfFinalMult" class="font-bold text-[12px] text-[#e23ad6]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E. GENERIC INFO / TOP-UP / MY BET HISTORY MODAL -->
+    <div id="genericModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4" onclick="if(event.target===this) closeGenericModal()">
+      <div class="w-full max-w-[380px] bg-[#1e1f22] border border-[#2e3035] rounded-2xl overflow-hidden shadow-2xl">
+        <div class="px-4 py-3 bg-[#25262a] flex items-center justify-between border-b border-[#32343a]">
+          <span id="genericModalTitle" class="font-bold text-[14px]">Info</span>
+          <button onclick="closeGenericModal()" class="text-[#9ea0a6] hover:text-white">✕</button>
+        </div>
+        <div id="genericModalBody" class="p-4 text-[13px] text-[#d0d2d6] whitespace-pre-line"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. REALISTIC GAME ROOM, FLYING & CRASH AUDIO ENGINE
+    // ==========================================
+    class AviatorAudio {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.sfxGain = null;
+        this.musicGain = null;
+        this.noiseBuffer = null;
+
+        const savedSound = localStorage.getItem('aviator_sound_enabled');
+        const savedMusic = localStorage.getItem('aviator_music_enabled');
+        this.soundEnabled = savedSound === null ? true : savedSound === 'true';
+        this.musicEnabled = savedMusic === null ? true : savedMusic === 'true';
+        this.unlocked = false;
+
+        this.musicInterval = null;
+        this.musicStep = 0;
+
+        // Continuous flying engine nodes
+        this.flyingNodes = null;
+        this.isFlyingSoundActive = false;
+        this.lastCountdownSec = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return false;
+          this.ctx = new AudioCtx();
+
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = 0.92;
+          this.masterGain.connect(this.ctx.destination);
+
+          this.sfxGain = this.ctx.createGain();
+          this.sfxGain.gain.value = this.soundEnabled ? 1.0 : 0.0;
+          this.sfxGain.connect(this.masterGain);
+
+          this.musicGain = this.ctx.createGain();
+          this.musicGain.gain.value = this.musicEnabled ? 0.42 : 0.0;
+          this.musicGain.connect(this.masterGain);
+
+          this.noiseBuffer = this._createNoiseBuffer(2.0);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            this.unlocked = true;
+          }).catch(() => {});
+        } else {
+          this.unlocked = true;
+        }
+        return true;
+      }
+
+      unlock() {
+        if (!this.init()) return;
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            this.unlocked = true;
+            if (this.musicEnabled && !this.musicInterval) this.startMusic();
+            if (this.soundEnabled && typeof STATE !== 'undefined' && STATE.phase === 'FLYING' && !this.isFlyingSoundActive) {
+              this.startFlying(STATE.multiplier || 1.0);
+            }
+          }).catch(() => {});
+        } else {
+          this.unlocked = true;
+          if (this.musicEnabled && !this.musicInterval) this.startMusic();
+          if (this.soundEnabled && typeof STATE !== 'undefined' && STATE.phase === 'FLYING' && !this.isFlyingSoundActive) {
+            this.startFlying(STATE.multiplier || 1.0);
+          }
+        }
+      }
+
+      _createNoiseBuffer(seconds = 2.0) {
+        const sampleRate = this.ctx.sampleRate;
+        const length = Math.floor(sampleRate * seconds);
+        const buffer = this.ctx.createBuffer(1, length, sampleRate);
+        const data = buffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          // Warm pink-tinted noise for realistic wind & engine texture
+          b0 = 0.99765 * b0 + white * 0.0990460;
+          b1 = 0.96300 * b1 + white * 0.2965164;
+          b2 = 0.57000 * b2 + white * 1.0526913;
+          data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.16;
+        }
+        return buffer;
+      }
+
+      _syncGains() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (this.sfxGain) {
+          this.sfxGain.gain.setTargetAtTime(this.soundEnabled ? 1.0 : 0.0, now, 0.03);
+        }
+        if (this.musicGain) {
+          this.musicGain.gain.setTargetAtTime(this.musicEnabled ? 0.42 : 0.0, now, 0.08);
+        }
+      }
+
+      playTone(freq, type, duration, vol = 0.08, slideTo = null, targetBus = 'sfx', delay = 0) {
+        if (targetBus === 'sfx' && !this.soundEnabled) return;
+        if (targetBus === 'music' && !this.musicEnabled) return;
+        if (!this.init() || !this.ctx) return;
+        if (targetBus === 'music' && this.ctx.state !== 'running') return;
+        try {
+          const t0 = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(Math.max(20, freq), t0);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + duration);
+          }
+          gain.gain.setValueAtTime(0.0001, t0);
+          gain.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+          osc.connect(gain);
+          gain.connect(targetBus === 'music' ? this.musicGain : this.sfxGain);
+          osc.start(t0);
+          osc.stop(t0 + duration + 0.02);
+        } catch (_) {}
+      }
+
+      playBet() {
+        this.unlock();
+        if (!this.soundEnabled || !this.ctx) return;
+        this.playTone(540, 'triangle', 0.07, 0.11, 760);
+        this.playTone(880, 'sine', 0.08, 0.08, 1080, 'sfx', 0.045);
+      }
+
+      playCancel() {
+        this.unlock();
+        if (!this.soundEnabled || !this.ctx) return;
+        this.playTone(480, 'sine', 0.11, 0.09, 240);
+      }
+
+      playCountdownTick() {
+        if (!this.soundEnabled || !this.ctx || this.ctx.state !== 'running') return;
+        this.playTone(920, 'sine', 0.045, 0.045, 720);
+      }
+
+      playTakeoff() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const now = this.ctx.currentTime;
+
+          // Propeller ignition + upward engine surge
+          const engOsc = this.ctx.createOscillator();
+          const engGain = this.ctx.createGain();
+          const engFilter = this.ctx.createBiquadFilter();
+          engOsc.type = 'sawtooth';
+          engOsc.frequency.setValueAtTime(52, now);
+          engOsc.frequency.exponentialRampToValueAtTime(118, now + 0.65);
+
+          engFilter.type = 'lowpass';
+          engFilter.frequency.setValueAtTime(220, now);
+          engFilter.frequency.exponentialRampToValueAtTime(950, now + 0.65);
+
+          engGain.gain.setValueAtTime(0.001, now);
+          engGain.gain.linearRampToValueAtTime(0.14, now + 0.12);
+          engGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+          engOsc.connect(engFilter);
+          engFilter.connect(engGain);
+          engGain.connect(this.sfxGain);
+          engOsc.start(now);
+          engOsc.stop(now + 0.72);
+
+          // Runway air rush whoosh
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = this.noiseBuffer;
+          const nFilter = this.ctx.createBiquadFilter();
+          nFilter.type = 'bandpass';
+          nFilter.Q.value = 1.1;
+          nFilter.frequency.setValueAtTime(260, now);
+          nFilter.frequency.exponentialRampToValueAtTime(1400, now + 0.6);
+
+          const nGain = this.ctx.createGain();
+          nGain.gain.setValueAtTime(0.001, now);
+          nGain.gain.linearRampToValueAtTime(0.16, now + 0.15);
+          nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+
+          noise.connect(nFilter);
+          nFilter.connect(nGain);
+          nGain.connect(this.sfxGain);
+          noise.start(now);
+          noise.stop(now + 0.7);
+        } catch (_) {}
+      }
+
+      startFlying(multiplier = 1.0) {
+        if (!this.soundEnabled || this.isFlyingSoundActive) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+
+        try {
+          const now = this.ctx.currentTime;
+
+          // 1. Master bus for flight loop
+          const flightBus = this.ctx.createGain();
+          flightBus.gain.setValueAtTime(0.001, now);
+          flightBus.gain.linearRampToValueAtTime(0.14, now + 0.35);
+          flightBus.connect(this.sfxGain);
+
+          // 2. Warm propeller engine fundamental + harmonic
+          const propOsc = this.ctx.createOscillator();
+          propOsc.type = 'sawtooth';
+          propOsc.frequency.setValueAtTime(64, now);
+
+          const subOsc = this.ctx.createOscillator();
+          subOsc.type = 'triangle';
+          subOsc.frequency.setValueAtTime(32, now);
+
+          const propFilter = this.ctx.createBiquadFilter();
+          propFilter.type = 'lowpass';
+          propFilter.frequency.setValueAtTime(360, now);
+          propFilter.Q.value = 1.8;
+
+          // 3. LFO propeller blade flutter modulation
+          const chopLfo = this.ctx.createOscillator();
+          chopLfo.type = 'sine';
+          chopLfo.frequency.setValueAtTime(15, now);
+
+          const chopDepth = this.ctx.createGain();
+          chopDepth.gain.setValueAtTime(0.045, now);
+
+          const engineAmp = this.ctx.createGain();
+          engineAmp.gain.setValueAtTime(0.55, now);
+
+          chopLfo.connect(chopDepth);
+          chopDepth.connect(engineAmp.gain);
+
+          propOsc.connect(propFilter);
+          subOsc.connect(propFilter);
+          propFilter.connect(engineAmp);
+          engineAmp.connect(flightBus);
+
+          // 4. Continuous wind / slipstream airflow
+          const windSrc = this.ctx.createBufferSource();
+          windSrc.buffer = this.noiseBuffer;
+          windSrc.loop = true;
+
+          const windFilter = this.ctx.createBiquadFilter();
+          windFilter.type = 'bandpass';
+          windFilter.frequency.setValueAtTime(620, now);
+          windFilter.Q.value = 0.8;
+
+          const windGain = this.ctx.createGain();
+          windGain.gain.setValueAtTime(0.45, now);
+
+          windSrc.connect(windFilter);
+          windFilter.connect(windGain);
+          windGain.connect(flightBus);
+
+          propOsc.start(now);
+          subOsc.start(now);
+          chopLfo.start(now);
+          windSrc.start(now);
+
+          this.flyingNodes = {
+            flightBus,
+            propOsc,
+            subOsc,
+            propFilter,
+            chopLfo,
+            windSrc,
+            windFilter
+          };
+          this.isFlyingSoundActive = true;
+          this.updateFlying(multiplier);
+        } catch (_) {}
+      }
+
+      updateFlying(multiplier = 1.0) {
+        if (!this.isFlyingSoundActive || !this.flyingNodes || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const clamped = Math.min(20, Math.max(1.0, Number(multiplier) || 1.0));
+        const norm = Math.log10(clamped) / Math.log10(20); // 0.0 -> 1.0 smooth curve
+
+        const propHz = 64 + norm * 62;       // 64Hz -> 126Hz
+        const chopHz = 15 + norm * 14;       // 15Hz -> 29Hz propeller spin
+        const filterHz = 360 + norm * 680;   // richer engine roar as multiplier climbs
+        const windHz = 620 + norm * 950;     // higher airspeed rush
+
+        this.flyingNodes.propOsc.frequency.setTargetAtTime(propHz, now, 0.08);
+        this.flyingNodes.subOsc.frequency.setTargetAtTime(propHz * 0.5, now, 0.08);
+        this.flyingNodes.chopLfo.frequency.setTargetAtTime(chopHz, now, 0.08);
+        this.flyingNodes.propFilter.frequency.setTargetAtTime(filterHz, now, 0.08);
+        this.flyingNodes.windFilter.frequency.setTargetAtTime(windHz, now, 0.08);
+      }
+
+      stopFlying() {
+        if (!this.flyingNodes || !this.ctx) {
+          this.isFlyingSoundActive = false;
+          this.flyingNodes = null;
+          return;
+        }
+        const nodes = this.flyingNodes;
+        this.flyingNodes = null;
+        this.isFlyingSoundActive = false;
+        try {
+          const now = this.ctx.currentTime;
+          nodes.flightBus.gain.cancelScheduledValues(now);
+          nodes.flightBus.gain.setValueAtTime(nodes.flightBus.gain.value, now);
+          nodes.flightBus.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+          setTimeout(() => {
+            try { nodes.propOsc.stop(); } catch (_) {}
+            try { nodes.subOsc.stop(); } catch (_) {}
+            try { nodes.chopLfo.stop(); } catch (_) {}
+            try { nodes.windSrc.stop(); } catch (_) {}
+            try { nodes.flightBus.disconnect(); } catch (_) {}
+          }, 120);
+        } catch (_) {}
+      }
+
+      playCrash() {
+        this.stopFlying();
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const now = this.ctx.currentTime;
+
+          // 1. Sub impact thump
+          const sub = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          sub.type = 'sine';
+          sub.frequency.setValueAtTime(145, now);
+          sub.frequency.exponentialRampToValueAtTime(34, now + 0.45);
+          subGain.gain.setValueAtTime(0.32, now);
+          subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+          sub.connect(subGain);
+          subGain.connect(this.sfxGain);
+          sub.start(now);
+          sub.stop(now + 0.52);
+
+          // 2. Doppler "Flew Away" engine stall drop
+          const dropOsc = this.ctx.createOscillator();
+          const dropFilter = this.ctx.createBiquadFilter();
+          const dropGain = this.ctx.createGain();
+          dropOsc.type = 'sawtooth';
+          dropOsc.frequency.setValueAtTime(340, now);
+          dropOsc.frequency.exponentialRampToValueAtTime(52, now + 0.62);
+          dropFilter.type = 'lowpass';
+          dropFilter.frequency.setValueAtTime(1500, now);
+          dropFilter.frequency.exponentialRampToValueAtTime(180, now + 0.62);
+          dropGain.gain.setValueAtTime(0.18, now);
+          dropGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+          dropOsc.connect(dropFilter);
+          dropFilter.connect(dropGain);
+          dropGain.connect(this.sfxGain);
+          dropOsc.start(now);
+          dropOsc.stop(now + 0.68);
+
+          // 3. Explosive jet-whoosh burst fading into distance
+          const burst = this.ctx.createBufferSource();
+          burst.buffer = this.noiseBuffer;
+          const burstFilter = this.ctx.createBiquadFilter();
+          burstFilter.type = 'lowpass';
+          burstFilter.frequency.setValueAtTime(2400, now);
+          burstFilter.frequency.exponentialRampToValueAtTime(210, now + 0.72);
+          const burstGain = this.ctx.createGain();
+          burstGain.gain.setValueAtTime(0.28, now);
+          burstGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+          burst.connect(burstFilter);
+          burstFilter.connect(burstGain);
+          burstGain.connect(this.sfxGain);
+          burst.start(now);
+          burst.stop(now + 0.78);
+
+          // 4. Descending two-note "Flew Away" alert cue
+          this.playTone(466.16, 'triangle', 0.16, 0.08, 311.13, 'sfx', 0.04);
+        } catch (_) {}
+      }
+
+      playFlewAway() {
+        this.playCrash();
+      }
+
+      playCashOut(mult = 2.0) {
+        this.unlock();
+        if (!this.soundEnabled || !this.ctx || this.ctx.state !== 'running') return;
+        const bigWin = Number(mult) >= 5.0;
+        this.playTone(523.25, 'triangle', 0.11, 0.13, null, 'sfx', 0);
+        this.playTone(659.25, 'triangle', 0.12, 0.13, null, 'sfx', 0.06);
+        this.playTone(783.99, 'triangle', 0.16, 0.14, null, 'sfx', 0.12);
+        this.playTone(1046.50, 'sine', bigWin ? 0.36 : 0.24, bigWin ? 0.16 : 0.12, null, 'sfx', 0.18);
+      }
+
+      playRain() {
+        this.unlock();
+        if (!this.soundEnabled || !this.ctx || this.ctx.state !== 'running') return;
+        [587.33, 739.99, 880, 1174.66].forEach((hz, i) => {
+          this.playTone(hz, 'sine', 0.22, 0.11, null, 'sfx', i * 0.055);
+        });
+      }
+
+      startMusic() {
+        if (!this.musicEnabled) return;
+        if (!this.init() || !this.ctx || this.ctx.state !== 'running') return;
+        this._syncGains();
+        if (this.musicInterval) return;
+
+        // Warm Aviator lounge progression: Am9 -> Fmaj7 -> Cmaj7 -> G6
+        const chords = [
+          { bass: 110.00, pad: [220.00, 261.63, 329.63, 493.88], arp: [440.00, 523.25, 659.25, 493.88] },
+          { bass: 87.31,  pad: [174.61, 220.00, 261.63, 329.63], arp: [349.23, 440.00, 523.25, 659.25] },
+          { bass: 130.81, pad: [196.00, 246.94, 261.63, 329.63], arp: [392.00, 523.25, 659.25, 493.88] },
+          { bass: 98.00,  pad: [196.00, 246.94, 293.66, 329.63], arp: [392.00, 493.88, 587.33, 440.00] }
+        ];
+
+        const playStep = () => {
+          if (!this.musicEnabled || !this.ctx || this.ctx.state !== 'running') return;
+          const chordIdx = Math.floor(this.musicStep / 4) % chords.length;
+          const beatInBar = this.musicStep % 4;
+          const c = chords[chordIdx];
+
+          // Warm chord pad on beat 0 of each bar
+          if (beatInBar === 0) {
+            c.pad.forEach((hz) => {
+              this.playTone(hz, 'sine', 1.85, 0.045, null, 'music', 0);
+            });
+            this.playTone(c.bass, 'triangle', 1.6, 0.09, null, 'music', 0);
+          }
+
+          // Subtle sub pulse on beat 2
+          if (beatInBar === 2) {
+            this.playTone(c.bass, 'sine', 0.75, 0.06, null, 'music', 0);
+          }
+
+          // Gentle melodic arpeggio bell on every step
+          const arpHz = c.arp[beatInBar];
+          this.playTone(arpHz, 'sine', 0.48, 0.032, null, 'music', 0);
+
+          this.musicStep = (this.musicStep + 1) % 16;
+        };
+
+        playStep();
+        this.musicInterval = setInterval(playStep, 520);
+      }
+
+      stopMusic() {
+        if (this.musicInterval) {
+          clearInterval(this.musicInterval);
+          this.musicInterval = null;
+        }
+      }
+
+      setSoundEnabled(enabled) {
+        this.soundEnabled = Boolean(enabled);
+        localStorage.setItem('aviator_sound_enabled', String(this.soundEnabled));
+        this._syncGains();
+        if (!this.soundEnabled) {
+          this.stopFlying();
+        } else if (typeof STATE !== 'undefined' && STATE.phase === 'FLYING') {
+          this.unlock();
+          this.startFlying(STATE.multiplier || 1.0);
+        }
+      }
+
+      toggleMusic(enabled) {
+        this.musicEnabled = Boolean(enabled);
+        localStorage.setItem('aviator_music_enabled', String(this.musicEnabled));
+        this._syncGains();
+        if (this.musicEnabled) {
+          this.unlock();
+          this.startMusic();
+        } else {
+          this.stopMusic();
+        }
+      }
+    }
+    const audio = new AviatorAudio();
+
+    // Unlock Web Audio automatically on first user tap/click/keypress
+    ['pointerdown', 'touchstart', 'keydown', 'click'].forEach((evt) => {
+      window.addEventListener(evt, () => audio.unlock(), { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        audio.stopFlying();
+      } else if (audio.soundEnabled && typeof STATE !== 'undefined' && STATE.phase === 'FLYING') {
+        audio.startFlying(STATE.multiplier || 1.0);
+      }
+    });
+
+    // ==========================================
+    // 2. IDENTITY & SHARED STATE
+    // ==========================================
+    function resolvePlayerIdentity() {
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser && tgUser.id) {
+        return {
+          playerId: String(tgUser.id),
+          displayName: tgUser.first_name || tgUser.username || `u_${tgUser.id}`,
+          avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
+        };
+      }
+      let storedId = localStorage.getItem('aviator_player_id');
+      if (!storedId) {
+        storedId = 'p_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('aviator_player_id', storedId);
+      }
+      return {
+        playerId: storedId,
+        displayName: 'd***u',
+        avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
+      };
+    }
+
+    const identity = resolvePlayerIdentity();
+
+    const STATE = {
+      balance: 1000.00,
+      phase: 'WAITING',
+      roundNumber: 1022303,
+      multiplier: 1.00,
+      waitTimeTotal: 5000,
+      waitTimeLeft: 5000,
+      flightStartTime: performance.now(),
+      sunburstAngle: 0,
+      flyAwayProgress: 0,
+      secondPanelVisible: true,
+      activeBottomTab: 'all',
+      topFilterType: 'x',
+      topFilterPeriod: 'day',
+      rainClaimed: false,
+      rainCount: 3,
+      rainMax: 25,
+      history: [],
+      myBetHistory: [],
+      lastFairnessProof: null,
+      panels: {
+        1: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false },
+        2: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false }
+      },
+      feed: { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 },
+      previousRoundRows: [],
+      previousRoundResult: 1.77,
+      topWinners: []
+    };
+
+    function getMultColorClass(val) {
+      if (val >= 10.0) return 'mult-pink';
+      if (val >= 2.0) return 'mult-purple';
+      return 'mult-blue';
+    }
+
+    function getBadgeClass(val) {
+      if (val >= 10.0) return 'badge-pink';
+      if (val >= 2.0) return 'badge-purple';
+      return 'badge-blue';
+    }
+
+    // ==========================================
+    // 3. UI RENDERING HELPERS
+    // ==========================================
+    function updateBalanceUI() {
+      document.getElementById('balanceDisplay').textContent = STATE.balance.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'bg-[#4a151b]/95 border border-[#8c2732] text-white px-3.5 py-2.5 rounded-xl flex items-center justify-between text-[13px] font-medium shadow-lg pointer-events-auto transition-opacity duration-300';
+      toast.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="text-white/70 hover:text-white ml-3 text-xs">✕</button>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    function renderHistoryRibbon() {
+      const ribbon = document.getElementById('historyRibbon');
+      const grid = document.getElementById('historyGrid');
+      ribbon.innerHTML = STATE.history.slice(0, 14).map((val) => {
+        const cls = getMultColorClass(val);
+        return `<span class="shrink-0 px-2 py-0.5 rounded-full bg-[#1b1c1e] text-[12px] font-bold ${cls}">${Number(val).toFixed(2)}x</span>`;
+      }).join('');
+      grid.innerHTML = STATE.history.slice(0, 35).map((val) => {
+        const cls = getMultColorClass(val);
+        return `<div class="py-1 rounded-full bg-[#141517] ${cls}">${Number(val).toFixed(2)}x</div>`;
+      }).join('');
+    }
+
+    function toggleHistoryDropdown() {
+      document.getElementById('historyDropdown').classList.toggle('hidden');
+    }
+
+    function updateOverlaysForPhase() {
+      document.getElementById('waitingOverlay').classList.toggle('hidden', STATE.phase !== 'WAITING');
+      document.getElementById('flyingOverlay').classList.toggle('hidden', STATE.phase !== 'FLYING');
+      document.getElementById('crashedOverlay').classList.toggle('hidden', STATE.phase !== 'CRASHED');
+
+      if (STATE.phase === 'FLYING') {
+        document.getElementById('liveMultiplierText').textContent = `${STATE.multiplier.toFixed(2)}x`;
+      } else if (STATE.phase === 'CRASHED') {
+        document.getElementById('crashedMultiplierText').textContent = `${STATE.multiplier.toFixed(2)}x`;
+      } else if (STATE.phase === 'WAITING') {
+        const pct = Math.max(0, (STATE.waitTimeLeft / STATE.waitTimeTotal) * 100);
+        document.getElementById('waitingProgressBar').style.width = `${pct}%`;
+      }
+      updatePanelButtonUI(1);
+      updatePanelButtonUI(2);
+    }
+
+    // ==========================================
+    // 4. DUAL BETTING PANELS (SERVER-SYNCED)
+    // ==========================================
+    function setPanelMode(panelId, mode) {
+      const betBtn = document.getElementById(`p${panelId}ModeBet`);
+      const autoBtn = document.getElementById(`p${panelId}ModeAuto`);
+      if (mode === 'bet') {
+        betBtn.className = 'px-6 py-1 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition';
+        autoBtn.className = 'px-6 py-1 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition';
+      } else {
+        autoBtn.className = 'px-6 py-1 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition';
+        betBtn.className = 'px-6 py-1 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition';
+      }
+    }
+
+    function toggleSecondPanel() {
+      STATE.secondPanelVisible = !STATE.secondPanelVisible;
+      const p2 = document.getElementById('betPanel2');
+      const icon = document.getElementById('togglePanel2Icon');
+      if (STATE.secondPanelVisible) {
+        p2.classList.remove('hidden');
+        icon.textContent = '−';
+      } else {
+        p2.classList.add('hidden');
+        icon.textContent = '+';
+      }
+    }
+
+    function adjustBetAmount(panelId, delta) {
+      const p = STATE.panels[panelId];
+      if (p.status !== 'IDLE') return;
+      p.amount = Math.max(1, parseFloat((p.amount + delta).toFixed(2)));
+      document.getElementById(`p${panelId}AmountInput`).value = p.amount.toFixed(2);
+      updatePanelButtonUI(panelId);
+    }
+
+    function setBetPreset(panelId, val) {
+      const p = STATE.panels[panelId];
+      if (p.status !== 'IDLE') return;
+      p.amount = parseFloat(val.toFixed(2));
+      document.getElementById(`p${panelId}AmountInput`).value = p.amount.toFixed(2);
+      updatePanelButtonUI(panelId);
+    }
+
+    function formatBetInput(panelId) {
+      const p = STATE.panels[panelId];
+      const inp = document.getElementById(`p${panelId}AmountInput`);
+      let v = parseFloat(inp.value);
+      if (isNaN(v) || v < 1) v = 1.00;
+      if (v > 10000) v = 10000.00;
+      p.amount = parseFloat(v.toFixed(2));
+      inp.value = p.amount.toFixed(2);
+      updatePanelButtonUI(panelId);
+    }
+
+    function getAutoCashConfig(panelId) {
+      const enabled = document.getElementById(`p${panelId}AutoCashToggle`).checked;
+      const val = parseFloat(document.getElementById(`p${panelId}AutoCashVal`).value) || 1.50;
+      return enabled ? Math.max(1.01, val) : null;
+    }
+
+    function syncPanelAutoCash(panelId) {
+      if (socket && socket.connected) {
+        socket.emit('panel:autocash', {
+          playerId: identity.playerId,
+          panelId,
+          autoCashOut: getAutoCashConfig(panelId)
+        });
+      }
+    }
+
+    function toggleAutoBet(panelId) {
+      const checked = document.getElementById(`p${panelId}AutoBetToggle`).checked;
+      STATE.panels[panelId].autoBet = checked;
+      if (checked && STATE.panels[panelId].status === 'IDLE' && !STATE.panels[panelId].queuedNext) {
+        handlePanelAction(panelId);
+      }
+    }
+
+    function applyPlayerPanels(activeBets = {}, queuedBets = {}) {
+      [1, 2].forEach((id) => {
+        const active = activeBets[id];
+        const queued = queuedBets[id];
+        const p = STATE.panels[id];
+        const inp = document.getElementById(`p${id}AmountInput`);
+
+        if (queued) {
+          p.status = 'IDLE';
+          p.queuedNext = true;
+          p.amount = Number(queued.amount || p.amount);
+          if (inp && document.activeElement !== inp) inp.value = p.amount.toFixed(2);
+        } else if (active && active.status === 'PLACED') {
+          p.queuedNext = false;
+          p.status = 'PLACED';
+          p.amount = Number(active.amount || p.amount);
+          if (inp && document.activeElement !== inp) inp.value = p.amount.toFixed(2);
+        } else {
+          p.queuedNext = false;
+          p.status = 'IDLE';
+        }
+        updatePanelButtonUI(id);
+      });
+    }
+
+    function handlePanelAction(panelId) {
+      const p = STATE.panels[panelId];
+      formatBetInput(panelId);
+
+      // 1. Place bet or queue for next round
+      if (p.status === 'IDLE' && !p.queuedNext) {
+        if (!socket || !socket.connected) {
+          showToast('Connecting to Aviator server...');
+          return;
+        }
+        socket.emit('bet:place', {
+          playerId: identity.playerId,
+          displayName: identity.displayName,
+          avatarSeed: identity.avatarSeed,
+          panelId,
+          amount: p.amount,
+          autoCashOut: getAutoCashConfig(panelId)
+        }, (res) => {
+          if (!res || !res.ok) {
+            showToast(res?.error || 'Bet rejected');
+            document.getElementById(`p${panelId}AutoBetToggle`).checked = false;
+            p.autoBet = false;
+            return;
+          }
+          audio.playBet();
+          if (typeof res.balance === 'number') {
+            STATE.balance = res.balance;
+            updateBalanceUI();
+          }
+          applyPlayerPanels(res.activeBets, res.queuedBets);
+          if (res.feed) {
+            STATE.feed = res.feed;
+            renderLiveBetsList();
+          }
+        });
+        return;
+      }
+
+      // 2. Cancel queued or waiting bet
+      if (p.queuedNext || (p.status === 'PLACED' && STATE.phase === 'WAITING')) {
+        socket.emit('bet:cancel', {
+          playerId: identity.playerId,
+          panelId
+        }, (res) => {
+          if (!res || !res.ok) {
+            showToast(res?.error || 'Could not cancel');
+            return;
+          }
+          audio.playCancel();
+          if (typeof res.balance === 'number') {
+            STATE.balance = res.balance;
+            updateBalanceUI();
+          }
+          applyPlayerPanels(res.activeBets, res.queuedBets);
+          if (res.feed) {
+            STATE.feed = res.feed;
+            renderLiveBetsList();
+          }
+        });
+        return;
+      }
+
+      // 3. Cash out during flight
+      if (p.status === 'PLACED' && STATE.phase === 'FLYING') {
+        socket.emit('bet:cashout', {
+          playerId: identity.playerId,
+          panelId
+        }, (res) => {
+          if (!res || !res.ok) {
+            showToast(res?.error || 'Cash out missed!');
+          }
+        });
+      }
+    }
+
+    function updatePanelButtonUI(panelId) {
+      const p = STATE.panels[panelId];
+      const btn = document.getElementById(`p${panelId}ActionBtn`);
+      const title = document.getElementById(`p${panelId}ActionTitle`);
+      const sub = document.getElementById(`p${panelId}ActionSub`);
+
+      if (p.queuedNext) {
+        btn.className = 'w-full h-full min-h-[76px] rounded-2xl btn-bet-red flex flex-col items-center justify-center text-white transition';
+        title.textContent = 'Cancel';
+        sub.textContent = 'Waiting for next round';
+        return;
+      }
+
+      if (p.status === 'PLACED') {
+        if (STATE.phase === 'WAITING') {
+          btn.className = 'w-full h-full min-h-[76px] rounded-2xl btn-bet-red flex flex-col items-center justify-center text-white transition';
+          title.textContent = 'Cancel';
+          sub.textContent = `${p.amount.toFixed(2)} ETB`;
+        } else if (STATE.phase === 'FLYING') {
+          const liveWin = (p.amount * STATE.multiplier).toFixed(2);
+          btn.className = 'w-full h-full min-h-[76px] rounded-2xl btn-bet-orange flex flex-col items-center justify-center text-white transition';
+          title.textContent = 'Cash Out';
+          sub.textContent = `${liveWin} ETB`;
+        }
+        return;
+      }
+
+      btn.className = 'w-full h-full min-h-[76px] rounded-2xl btn-bet-green flex flex-col items-center justify-center text-white transition';
+      title.textContent = 'Bet';
+      sub.textContent = `${p.amount.toFixed(2)} ETB`;
+    }
+
+    // ==========================================
+    // 5. LIVE FEED, PREVIOUS & TOP LEADERBOARD
+    // ==========================================
+    function renderLiveBetsList() {
+      const feed = STATE.feed || { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 };
+      const totalDisplayBets = feed.totalDisplayBets || 435;
+      const activeBetsLeft = feed.activeBetsLeft ?? totalDisplayBets;
+
+      document.getElementById('allBetsCounter').innerHTML = `${activeBetsLeft}/${totalDisplayBets} <span class="text-[#8e9096] font-normal">Bets</span>`;
+      document.getElementById('allBetsProgress').style.width = `${(activeBetsLeft / totalDisplayBets) * 100}%`;
+      document.getElementById('activeFlightCount').textContent = activeBetsLeft;
+      document.getElementById('totalWinEtb').textContent = Number(feed.totalWin || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      document.getElementById('liveBetsList').innerHTML = (feed.rows || []).map((pl) => {
+        const isMe = pl.playerId === identity.playerId || pl.isMe;
+        const rowBg = pl.cashedOut
+          ? 'bg-[#17301c] border-[#295933]'
+          : (isMe ? 'bg-[#222429] border-[#383a42]' : 'bg-[#141517] border-transparent');
+        const multBadge = pl.cashedOut
+          ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold ${getBadgeClass(pl.cashMult)}">${Number(pl.cashMult).toFixed(2)}x</span>`
+          : '';
+        const winText = pl.cashedOut ? Number(pl.winAmount).toFixed(2) : '';
+
+        return `
+          <div class="px-2 py-1.5 rounded-xl border ${rowBg} grid grid-cols-12 items-center text-[12px]">
+            <div class="col-span-5 flex items-center gap-2 truncate">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(pl.avatarSeed || pl.name)}" alt="" class="w-5 h-5 rounded-full bg-[#25262a] shrink-0" />
+              <span class="truncate ${isMe ? 'text-white font-bold' : 'text-[#b0b2b8]'}">${pl.name}</span>
+            </div>
+            <div class="col-span-3 text-right font-semibold text-white">${Number(pl.bet).toFixed(2)}</div>
+            <div class="col-span-2 text-center">${multBadge}</div>
+            <div class="col-span-2 text-right font-bold text-[#38d354]">${winText}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPreviousTab() {
+      const resEl = document.getElementById('prevRoundResultText');
+      resEl.textContent = `${Number(STATE.previousRoundResult || 1.00).toFixed(2)}x`;
+      resEl.className = `text-[26px] font-extrabold leading-none ${getMultColorClass(STATE.previousRoundResult)}`;
+
+      document.getElementById('previousBetsList').innerHTML = (STATE.previousRoundRows || []).map((pl) => {
+        const rowBg = pl.cashedOut ? 'bg-[#17301c] border-[#295933]' : 'bg-[#141517] border-transparent';
+        const multBadge = pl.cashedOut
+          ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold ${getBadgeClass(pl.cashMult)}">${Number(pl.cashMult).toFixed(2)}x</span>`
+          : '';
+        const winText = pl.cashedOut ? Number(pl.winAmount).toFixed(2) : '';
+        return `
+          <div class="px-2 py-1.5 rounded-xl border ${rowBg} grid grid-cols-12 items-center text-[12px]">
+            <div class="col-span-5 flex items-center gap-2 truncate">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(pl.avatarSeed || pl.name)}" alt="" class="w-5 h-5 rounded-full bg-[#25262a] shrink-0" />
+              <span class="truncate text-[#b0b2b8]">${pl.name}</span>
+            </div>
+            <div class="col-span-3 text-right font-semibold text-white">${Number(pl.bet).toFixed(2)}</div>
+            <div class="col-span-2 text-center">${multBadge}</div>
+            <div class="col-span-2 text-right font-bold text-[#38d354]">${winText}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTopLeaderboard() {
+      const container = document.getElementById('topLeaderboardList');
+      let sorted = [...(STATE.topWinners || [])];
+      if (STATE.topFilterType === 'win') {
+        sorted.sort((a, b) => b.win - a.win);
+      } else {
+        sorted.sort((a, b) => b.mult - a.mult);
+      }
+
+      container.innerHTML = sorted.map((item) => `
+        <div class="bg-[#141517] border border-[#25262a] rounded-2xl p-2.5 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.user)}" alt="" class="w-7 h-7 rounded-full bg-[#25262a]" />
+              <div>
+                <div class="text-[12px] font-bold text-white leading-tight">${item.user}</div>
+                <div class="text-[10px] text-[#7c7e85]">${item.date}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="toggleChatDrawer()" class="w-7 h-7 rounded-full bg-[#222327] hover:bg-[#2d2f34] flex items-center justify-center text-xs text-[#9ea0a6]">💬</button>
+              <button onclick="openProvablyFairModal(${item.roundId}, ${item.roundMax})" class="w-7 h-7 rounded-full bg-[#222327] hover:bg-[#2d2f34] flex items-center justify-center text-xs text-[#38d354]">🛡️</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1.5 border-t border-[#222328] text-[11px]">
+            <div class="flex justify-between"><span class="text-[#7c7e85]">Bet ETB</span><span class="font-bold text-white">${Number(item.bet).toFixed(2)}</span></div>
+            <div class="flex justify-between"><span class="text-[#7c7e85]">Result</span><span class="font-bold text-[#e23ad6]">${Number(item.mult).toFixed(2)}x</span></div>
+            <div class="flex justify-between"><span class="text-[#7c7e85]">Win ETB</span><span class="font-bold text-white">${Number(item.win).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+            <div class="flex justify-between"><span class="text-[#7c7e85]">Round max.</span><span class="font-bold text-[#e23ad6]">${Number(item.roundMax).toFixed(2)}x</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setTopFilter(kind, value, btnEl) {
+      if (kind === 'type') {
+        STATE.topFilterType = value;
+        document.querySelectorAll('.top-type-btn').forEach((b) => { b.className = 'top-type-btn py-1 rounded-full text-[#8e9096] font-semibold'; });
+      } else {
+        STATE.topFilterPeriod = value;
+        document.querySelectorAll('.top-period-btn').forEach((b) => { b.className = 'top-period-btn py-1 rounded-full text-[#8e9096] font-semibold'; });
+      }
+      btnEl.className = `${kind === 'type' ? 'top-type-btn' : 'top-period-btn'} py-1 rounded-full bg-[#2c2d31] text-white font-semibold`;
+      renderTopLeaderboard();
+    }
+
+    function switchBottomTab(tab) {
+      STATE.activeBottomTab = tab;
+      const tabs = { all: 'tabAllBets', previous: 'tabPrevious', top: 'tabTop' };
+      const contents = { all: 'contentAllBets', previous: 'contentPrevious', top: 'contentTop' };
+
+      Object.keys(tabs).forEach((k) => {
+        document.getElementById(tabs[k]).className = k === tab
+          ? 'py-1.5 rounded-full text-[12px] font-semibold bg-[#2c2d31] text-white transition'
+          : 'py-1.5 rounded-full text-[12px] font-semibold text-[#8e9096] hover:text-white transition';
+        document.getElementById(contents[k]).classList.toggle('hidden', k !== tab);
+        if (k === tab) document.getElementById(contents[k]).classList.add('flex');
+      });
+
+      if (tab === 'previous') renderPreviousTab();
+      if (tab === 'top') renderTopLeaderboard();
+    }
+
+    // ==========================================
+    // 6. OFFICIAL SPRIBE AVIATOR AIRPLANE SPRITE & CANVAS RENDERER
+    // ==========================================
+    const SPRIBE_PLANE_SVG = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 96" width="180" height="96">
+        <defs>
+          <linearGradient id="bodyRed" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ff2e39"/>
+            <stop offset="52%" stop-color="#e50914"/>
+            <stop offset="100%" stop-color="#9e050d"/>
+          </linearGradient>
+          <linearGradient id="wingRed" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff444e"/>
+            <stop offset="100%" stop-color="#c90711"/>
+          </linearGradient>
+          <linearGradient id="propBlur" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.05"/>
+            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.08"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Landing Gear Struts & Wheel -->
+        <g stroke="#181a1d" stroke-width="3" stroke-linecap="round">
+          <line x1="88" y1="62" x2="96" y2="82"/>
+          <line x1="108" y1="61" x2="98" y2="82"/>
+          <line x1="28" y1="54" x2="24" y2="66"/>
+        </g>
+        <circle cx="97" cy="83" r="8.5" fill="#181a1d" stroke="#0c0d0f" stroke-width="1.5"/>
+        <circle cx="97" cy="83" r="4" fill="#d4d7dd"/>
+        <circle cx="97" cy="83" r="1.8" fill="#e50914"/>
+        <circle cx="24" cy="67" r="3.5" fill="#181a1d"/>
+
+        <!-- Rear Horizontal Stabilizer -->
+        <path d="M16 44 L4 47 L18 52 Z" fill="#b3060f" stroke="#181a1d" stroke-width="1.6" stroke-linejoin="round"/>
+
+        <!-- Main Red Fuselage & Swept Tail Fin -->
+        <path d="M12 46
+                 L6 20
+                 Q8 14 19 16
+                 L36 33
+                 L72 30
+                 Q86 24 108 26
+                 L132 30
+                 Q148 33 152 46
+                 Q152 57 136 60
+                 L92 63
+                 L30 55
+                 Q15 53 12 46 Z"
+              fill="url(#bodyRed)" stroke="#141517" stroke-width="2" stroke-linejoin="round"/>
+
+        <!-- Top Fuselage Specular Shine -->
+        <path d="M40 34 Q82 28 134 34" fill="none" stroke="#ff7a81" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
+
+        <!-- Cockpit Cutout & Pilot Windshield -->
+        <path d="M62 32 Q74 23 89 31 L84 37 L64 37 Z" fill="#1b1d21" stroke="#101114" stroke-width="1.5"/>
+        <path d="M66 32 Q74 26 83 31" fill="none" stroke="#9ea6b2" stroke-width="1.4" stroke-linecap="round"/>
+
+        <!-- High Swept Wing & Strut -->
+        <path d="M52 29 L114 18 Q123 18 119 25 L66 37 Z" fill="url(#wingRed)" stroke="#141517" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="78" y1="32" x2="72" y2="56" stroke="#181a1d" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- Signature Spribe Tail 'X' Emblem -->
+        <g stroke="#18191c" stroke-width="3.2" stroke-linecap="round">
+          <line x1="14" y1="24" x2="26" y2="38"/>
+          <line x1="26" y1="24" x2="14" y2="38"/>
+        </g>
+
+        <!-- Nose Engine Cowling & White-Red Spinner Cone -->
+        <path d="M140 32 Q153 35 153 46 Q153 57 140 59 Z" fill="#c90711" stroke="#141517" stroke-width="1.6"/>
+        <line x1="142" y1="39" x2="146" y2="39" stroke="#181a1d" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="143" y1="45" x2="148" y2="45" stroke="#181a1d" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="142" y1="51" x2="146" y2="51" stroke="#181a1d" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M151 39 L164 46 L151 53 Z" fill="#f3f4f6" stroke="#181a1d" stroke-width="1.6" stroke-linejoin="round"/>
+        <circle cx="162" cy="46" r="2.2" fill="#e50914"/>
+
+        <!-- Translucent Spinning Propeller Motion Blur Disc -->
+        <ellipse cx="158" cy="46" rx="6" ry="38" fill="url(#propBlur)"/>
+      </svg>
+    `.trim();
+
+    const planeSprite = new Image();
+    let planeSpriteReady = false;
+    planeSprite.onload = () => { planeSpriteReady = true; };
+    planeSprite.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(SPRIBE_PLANE_SVG);
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawPropellerPlane(x, y, angleRad) {
+      if (!document.getElementById('animToggle').checked) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angleRad);
+
+      ctx.shadowColor = 'rgba(229, 9, 20, 0.72)';
+      ctx.shadowBlur = 18;
+
+      if (planeSpriteReady) {
+        const planeW = 86;
+        const planeH = 46;
+        ctx.drawImage(planeSprite, -planeW * 0.52, -planeH * 0.56, planeW, planeH);
+      }
+
+      // Dynamic spinning propeller blade flicker right at the spinner nose
+      ctx.shadowBlur = 0;
+      const bladeLen = 19 * Math.sin(performance.now() * 0.055);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(31, -bladeLen);
+      ctx.lineTo(31, bladeLen);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    let lastFrameTime = performance.now();
+
+    function gameLoop(now) {
+      const dt = now - lastFrameTime;
+      lastFrameTime = now;
+
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 1. Rotating Radial Sunburst Rays from Bottom-Left
+      STATE.sunburstAngle += dt * 0.00018;
+      const originX = 0;
+      const originY = h;
+      const rayCount = 24;
+      const maxRadius = Math.hypot(w, h) * 1.2;
+
+      for (let i = 0; i < rayCount; i++) {
+        if (i % 2 === 0) continue;
+        const a1 = STATE.sunburstAngle + (i * (Math.PI * 2)) / rayCount;
+        const a2 = STATE.sunburstAngle + ((i + 1) * (Math.PI * 2)) / rayCount;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.024)';
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(originX + Math.cos(a1) * maxRadius, originY + Math.sin(a1) * maxRadius);
+        ctx.lineTo(originX + Math.cos(a2) * maxRadius, originY + Math.sin(a2) * maxRadius);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (STATE.phase === 'FLYING') {
+        const radial = ctx.createRadialGradient(w * 0.5, h * 0.48, 10, w * 0.5, h * 0.48, 140);
+        radial.addColorStop(0, STATE.multiplier >= 2 ? 'rgba(145, 62, 248, 0.24)' : 'rgba(52, 180, 255, 0.18)');
+        radial.addColorStop(1, 'rgba(9, 10, 12, 0)');
+        ctx.fillStyle = radial;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // 2. Render Plane Trajectory by Server Phase
+      if (STATE.phase === 'WAITING') {
+        STATE.waitTimeLeft = Math.max(0, STATE.waitTimeLeft - dt);
+        const pct = Math.max(0, (STATE.waitTimeLeft / STATE.waitTimeTotal) * 100);
+        document.getElementById('waitingProgressBar').style.width = `${pct}%`;
+        drawPropellerPlane(46, h - 22, -0.08);
+      } else if (STATE.phase === 'FLYING') {
+        const elapsedSec = Math.max(0, (now - STATE.flightStartTime) / 1000);
+        const progress = Math.min(1, elapsedSec / 5.5);
+        const bobX = progress >= 1 ? Math.sin(elapsedSec * 2.2) * 8 : 0;
+        const bobY = progress >= 1 ? Math.cos(elapsedSec * 2.8) * 10 : 0;
+
+        const startX = 12;
+        const startY = h - 10;
+        const endX = startX + (w * 0.78) * progress + bobX;
+        const endY = startY - (h * 0.66) * Math.pow(progress, 1.35) + bobY;
+
+        const ctrlX = startX + (endX - startX) * 0.55;
+        const ctrlY = startY;
+
+        const fillGrad = ctx.createLinearGradient(0, endY, 0, startY);
+        fillGrad.addColorStop(0, 'rgba(229, 9, 20, 0.36)');
+        fillGrad.addColorStop(1, 'rgba(229, 9, 20, 0.03)');
+
+        ctx.fillStyle = fillGrad;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+        ctx.lineTo(endX, startY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#e50914';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+        ctx.stroke();
+
+        const planePitch = -0.18 - (progress * 0.14);
+        drawPropellerPlane(endX + 12, endY - 8, planePitch);
+      } else if (STATE.phase === 'CRASHED') {
+        STATE.flyAwayProgress += dt * 0.0028;
+        if (STATE.flyAwayProgress < 1.2) {
+          const flyX = w * 0.78 + STATE.flyAwayProgress * (w * 0.45);
+          const flyY = h * 0.28 - STATE.flyAwayProgress * (h * 0.45);
+          drawPropellerPlane(flyX, flyY, -0.45);
+        }
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ==========================================
+    // 7. MODALS, MENU & LIVE CHAT
+    // ==========================================
+    function toggleMenuDrawer() {
+      document.getElementById('menuDrawer').classList.toggle('hidden');
+    }
+
+    const AVATAR_SEEDS = ['MercedesGold', 'LionKing', 'RedEagle', 'CyberFox', 'TigerPro'];
+    let avatarIndex = Math.max(0, AVATAR_SEEDS.indexOf(identity.avatarSeed));
+
+    function updateAvatarUI() {
+      document.getElementById('userAvatarImg').src = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(identity.avatarSeed)}&backgroundColor=eab308`;
+    }
+
+    function cycleUserAvatar() {
+      avatarIndex = (avatarIndex + 1) % AVATAR_SEEDS.length;
+      identity.avatarSeed = AVATAR_SEEDS[avatarIndex];
+      localStorage.setItem('aviator_avatar_seed', identity.avatarSeed);
+      updateAvatarUI();
+      if (socket && socket.connected) {
+        socket.emit('avatar:update', { playerId: identity.playerId, avatarSeed: identity.avatarSeed });
+      }
+      showToast('Avatar updated!');
+    }
+
+    function syncAudioControlsUI() {
+      const sToggle = document.getElementById('soundToggle');
+      const mToggle = document.getElementById('musicToggle');
+      const quickBtn = document.getElementById('quickAudioBtn');
+      if (sToggle) sToggle.checked = audio.soundEnabled;
+      if (mToggle) mToggle.checked = audio.musicEnabled;
+      if (quickBtn) {
+        const anyOn = audio.soundEnabled || audio.musicEnabled;
+        quickBtn.textContent = anyOn ? '🔊' : '🔇';
+        quickBtn.className = anyOn
+          ? 'w-8 h-8 rounded-full bg-[#1b1c1f] hover:bg-[#26282c] flex items-center justify-center text-[#38d354] hover:text-white transition text-sm'
+          : 'w-8 h-8 rounded-full bg-[#1b1c1f] hover:bg-[#26282c] flex items-center justify-center text-[#7c7e85] hover:text-white transition text-sm';
+      }
+    }
+
+    function toggleAudioSetting(type) {
+      if (type === 'sound') {
+        audio.setSoundEnabled(document.getElementById('soundToggle').checked);
+      } else if (type === 'music') {
+        audio.toggleMusic(document.getElementById('musicToggle').checked);
+      }
+      syncAudioControlsUI();
+    }
+
+    function toggleQuickAudio() {
+      const anyOn = audio.soundEnabled || audio.musicEnabled;
+      const next = !anyOn;
+      audio.setSoundEnabled(next);
+      audio.toggleMusic(next);
+      syncAudioControlsUI();
+      showToast(next ? 'Game sound & music ON' : 'All game audio muted');
+    }
+
+    function toggleChatDrawer() {
+      const drawer = document.getElementById('chatDrawer');
+      drawer.classList.toggle('hidden');
+      document.getElementById('chatUnreadDot').classList.add('hidden');
+    }
+
+    function toggleChatRulesModal() {
+      document.getElementById('chatRulesModal').classList.toggle('hidden');
+    }
+
+    function updateChatCharCount() {
+      const inp = document.getElementById('chatInput');
+      document.getElementById('chatCharCount').textContent = 160 - inp.value.length;
+    }
+
+    function renderChatMessages(messages) {
+      const box = document.getElementById('chatDynamicMessages');
+      box.innerHTML = (messages || []).map((m) => {
+        const isMe = m.playerId === identity.playerId;
+        return `
+          <div class="flex items-start gap-2.5">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.user)}" alt="" class="w-7 h-7 rounded-full bg-[#25262a] shrink-0 mt-0.5" />
+            <div class="bg-[#1e1f23] border border-[#2c2d33] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[82%]">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-[11px] font-bold ${isMe ? 'text-[#38d354]' : 'text-[#60a5fa]'}">${m.user}</span>
+                <span class="text-[10px] text-[#6c6e75]">${m.time}</span>
+              </div>
+              <div class="text-[13px] text-white break-words">${m.text.replace(/</g, '&lt;')}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      const scrollBox = document.getElementById('chatMessagesContainer');
+      scrollBox.scrollTop = scrollBox.scrollHeight;
+    }
+
+    function appendChatMessage(m) {
+      const box = document.getElementById('chatDynamicMessages');
+      const isMe = m.playerId === identity.playerId;
+      const msgEl = document.createElement('div');
+      msgEl.className = 'flex items-start gap-2.5';
+      msgEl.innerHTML = `
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.user)}" alt="" class="w-7 h-7 rounded-full bg-[#25262a] shrink-0 mt-0.5" />
+        <div class="bg-[#1e1f23] border border-[#2c2d33] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[82%]">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="text-[11px] font-bold ${isMe ? 'text-[#38d354]' : 'text-[#60a5fa]'}">${m.user}</span>
+            <span class="text-[10px] text-[#6c6e75]">${m.time}</span>
+          </div>
+          <div class="text-[13px] text-white break-words">${String(m.text || '').replace(/</g, '&lt;')}</div>
+        </div>
+      `;
+      box.appendChild(msgEl);
+      const scrollBox = document.getElementById('chatMessagesContainer');
+      scrollBox.scrollTop = scrollBox.scrollHeight;
+    }
+
+    function sendChatMessage(e) {
+      e.preventDefault();
+      const inp = document.getElementById('chatInput');
+      const txt = inp.value.trim();
+      if (!txt || !socket) return;
+      socket.emit('chat:send', { playerId: identity.playerId, text: txt }, () => {
+        inp.value = '';
+        updateChatCharCount();
+      });
+    }
+
+    function claimRainBonus() {
+      if (STATE.rainClaimed || !socket) return;
+      socket.emit('chat:claim_rain', { playerId: identity.playerId }, (res) => {
+        if (!res || !res.ok) {
+          showToast(res?.error || 'Could not claim Rain bonus');
+          return;
+        }
+        STATE.rainClaimed = true;
+        STATE.rainCount = res.claimedCount;
+        STATE.balance = res.balance;
+        updateBalanceUI();
+        audio.playRain();
+
+        document.getElementById('rainQuantityText').innerHTML = `Quantity: <strong class="text-white">${res.claimedCount} / ${res.maxClaims}</strong>`;
+        const btn = document.getElementById('claimRainBtn');
+        btn.textContent = '✓ Claimed 20.00 ETB';
+        btn.className = 'w-full py-2 rounded-full bg-[#2b4c26] text-[#9ec499] font-bold text-xs cursor-default';
+        showToast('+20.00 ETB Rain Bonus Added!');
+      });
+    }
+
+    function renderFairnessModal(proof) {
+      if (!proof) return;
+      const mult = Number(proof.crashPoint || STATE.previousRoundResult || 1.00);
+      document.getElementById('pfRoundTitle').textContent = `ROUND ${proof.roundId}`;
+      const pill = document.getElementById('pfResultPill');
+      pill.textContent = `${mult.toLocaleString('en-US', { minimumFractionDigits: 2 })}x`;
+      pill.className = `px-2 py-0.5 rounded-full text-[11px] font-bold ${getBadgeClass(mult)}`;
+      document.getElementById('pfServerSeed').textContent = proof.serverSeed || '';
+      document.getElementById('pfClientSeeds').innerHTML = (proof.clientSeeds || []).map((c, idx) => `
+        <div class="bg-[#111214] border border-[#28292e] rounded-xl p-2 flex flex-col gap-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[#8e9096]">Player N${idx + 1}: <strong class="text-white">${c.player}</strong></span>
+            <span class="text-[10px] text-[#38d354]">Verified</span>
+          </div>
+          <div class="font-mono text-[11px] text-[#b0b2b8] truncate">Seed: ${c.seed}</div>
+        </div>
+      `).join('');
+      document.getElementById('pfHash').textContent = proof.combinedHash || '';
+      document.getElementById('pfHex').textContent = proof.hex || '';
+      document.getElementById('pfDecimal').textContent = proof.decimal || '';
+      document.getElementById('pfFinalMult').textContent = `${mult.toLocaleString('en-US', { minimumFractionDigits: 2 })}x`;
+    }
+
+    async function openProvablyFairModal(roundId = STATE.roundNumber - 1) {
+      document.getElementById('provablyFairModal').classList.remove('hidden');
+      try {
+        const res = await fetch(`/api/aviator/fairness/${encodeURIComponent(roundId)}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.proof) {
+          renderFairnessModal(data.proof);
+          return;
+        }
+      } catch (_) {}
+      if (STATE.lastFairnessProof) renderFairnessModal(STATE.lastFairnessProof);
+    }
+
+    function closeProvablyFairModal() {
+      document.getElementById('provablyFairModal').classList.add('hidden');
+    }
+
+    function openSimpleInfoModal(title, bodyText) {
+      document.getElementById('genericModalTitle').textContent = title;
+      document.getElementById('genericModalBody').textContent = bodyText;
+      document.getElementById('genericModal').classList.remove('hidden');
+    }
+
+    function openTopUpModal() {
+      document.getElementById('genericModalTitle').textContent = 'Demo Balance Top-Up';
+      document.getElementById('genericModalBody').innerHTML = `
+        <div class="flex flex-col gap-3">
+          <p class="text-[#b0b2b8]">Current Balance: <strong class="text-[#38d354]">${STATE.balance.toFixed(2)} ETB</strong></p>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="addDemoFunds(100)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+100 ETB</button>
+            <button onclick="addDemoFunds(500)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+500 ETB</button>
+            <button onclick="addDemoFunds(2000)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+2000 ETB</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('genericModal').classList.remove('hidden');
+    }
+
+    function addDemoFunds(amt) {
+      if (socket && socket.connected) {
+        socket.emit('balance:topup', { playerId: identity.playerId, amount: amt }, (res) => {
+          if (res && typeof res.balance === 'number') {
+            STATE.balance = res.balance;
+            updateBalanceUI();
+            audio.playCashOut();
+            closeGenericModal();
+            showToast(`Added ${amt.toFixed(2)} ETB to demo wallet`);
+          }
+        });
+      }
+    }
+
+    function openMyBetHistoryModal() {
+      document.getElementById('genericModalTitle').textContent = 'My Bet History';
+      if (!STATE.myBetHistory || STATE.myBetHistory.length === 0) {
+        document.getElementById('genericModalBody').textContent = 'You have not placed any bets in this session yet.';
+      } else {
+        document.getElementById('genericModalBody').innerHTML = `
+          <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+            ${STATE.myBetHistory.map((b) => `
+              <div class="px-3 py-2 rounded-xl bg-[#141517] flex items-center justify-between text-xs">
+                <span class="text-[#8e9096]">${b.time}</span>
+                <span class="font-bold text-white">${Number(b.bet).toFixed(2)} ETB</span>
+                <span class="font-bold ${getMultColorClass(b.mult)}">${Number(b.mult).toFixed(2)}x</span>
+                <span class="font-bold ${b.win > 0 ? 'text-[#38d354]' : 'text-[#e50914]'}">${b.win > 0 ? '+' + Number(b.win).toFixed(2) : '0.00'}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+      document.getElementById('genericModal').classList.remove('hidden');
+    }
+
+    function closeGenericModal() {
+      document.getElementById('genericModal').classList.add('hidden');
+    }
+
+    // ==========================================
+    // 8. SOCKET.IO CONNECTION & EVENT HANDLERS
+    // ==========================================
+    const socket = typeof io === 'function'
+      ? io({ auth: { playerId: identity.playerId, displayName: identity.displayName, avatarSeed: identity.avatarSeed } })
+      : null;
+
+    if (socket) {
+      socket.on('connect', () => {
+        socket.emit('player:identify', identity);
+      });
+
+      socket.on('room:state', (snap) => {
+        if (!snap) return;
+        STATE.roundNumber = snap.roundId;
+        STATE.phase = snap.phase;
+        STATE.multiplier = Number(snap.multiplier || 1.00);
+        STATE.waitTimeTotal = snap.waitTimeTotal || 5000;
+        STATE.waitTimeLeft = snap.waitTimeLeft ?? 5000;
+        if (snap.phase === 'FLYING') {
+          STATE.flightStartTime = performance.now() - (snap.flightElapsedMs || 0);
+        }
+        if (Array.isArray(snap.history)) STATE.history = snap.history;
+        if (Array.isArray(snap.previousRoundRows)) STATE.previousRoundRows = snap.previousRoundRows;
+        if (typeof snap.previousRoundResult === 'number') STATE.previousRoundResult = snap.previousRoundResult;
+        if (Array.isArray(snap.topWinners)) STATE.topWinners = snap.topWinners;
+        if (snap.feed) STATE.feed = snap.feed;
+        if (typeof snap.onlinePlayers === 'number') {
+          document.getElementById('onlinePlayersCount').textContent = String(snap.onlinePlayers);
+        }
+        if (Array.isArray(snap.chatMessages)) renderChatMessages(snap.chatMessages);
+        if (snap.activeRain) {
+          STATE.rainCount = snap.activeRain.claimedCount;
+          STATE.rainMax = snap.activeRain.maxClaims;
+          document.getElementById('rainQuantityText').innerHTML = `Quantity: <strong class="text-white">${STATE.rainCount} / ${STATE.rainMax}</strong>`;
+        }
+        if (snap.player) {
+          STATE.balance = Number(snap.player.balance ?? STATE.balance);
+          if (snap.player.maskedName) document.getElementById('menuPlayerName').textContent = snap.player.maskedName;
+          if (Array.isArray(snap.player.betHistory)) STATE.myBetHistory = snap.player.betHistory;
+          applyPlayerPanels(snap.player.activeBets, snap.player.queuedBets);
+        }
+
+        updateBalanceUI();
+        renderHistoryRibbon();
+        renderLiveBetsList();
+        if (STATE.activeBottomTab === 'previous') renderPreviousTab();
+        if (STATE.activeBottomTab === 'top') renderTopLeaderboard();
+        updateOverlaysForPhase();
+        if (snap.phase === 'FLYING') {
+          audio.startFlying(STATE.multiplier);
+        } else {
+          audio.stopFlying();
+        }
+      });
+
+      socket.on('round:waiting', (data) => {
+        STATE.phase = 'WAITING';
+        STATE.roundNumber = data.roundId;
+        STATE.multiplier = 1.00;
+        STATE.waitTimeTotal = data.waitTimeTotal || 5000;
+        STATE.waitTimeLeft = data.waitTimeLeft || 5000;
+        STATE.flyAwayProgress = 0;
+        audio.stopFlying();
+        audio.lastCountdownSec = null;
+
+        if (data.feed) STATE.feed = data.feed;
+        updateOverlaysForPhase();
+        renderLiveBetsList();
+
+        // Trigger client Auto Bet if toggled on
+        [1, 2].forEach((id) => {
+          const p = STATE.panels[id];
+          if (p.autoBet && p.status === 'IDLE' && !p.queuedNext) {
+            handlePanelAction(id);
+          }
+        });
+      });
+
+      socket.on('round:wait_tick', (data) => {
+        if (data.roundId === STATE.roundNumber && STATE.phase === 'WAITING') {
+          STATE.waitTimeLeft = data.waitTimeLeft;
+          const secLeft = Math.ceil(data.waitTimeLeft / 1000);
+          if (secLeft <= 3 && secLeft >= 1 && audio.lastCountdownSec !== secLeft) {
+            audio.lastCountdownSec = secLeft;
+            audio.playCountdownTick();
+          }
+        }
+      });
+
+      socket.on('round:takeoff', (data) => {
+        STATE.phase = 'FLYING';
+        STATE.roundNumber = data.roundId;
+        STATE.multiplier = 1.00;
+        STATE.flightStartTime = performance.now();
+        audio.playTakeoff();
+        audio.startFlying(1.00);
+        updateOverlaysForPhase();
+      });
+
+      socket.on('round:tick', (data) => {
+        if (data.roundId !== STATE.roundNumber || STATE.phase !== 'FLYING') return;
+        STATE.multiplier = Number(data.multiplier || 1.00);
+        audio.updateFlying(STATE.multiplier);
+        document.getElementById('liveMultiplierText').textContent = `${STATE.multiplier.toFixed(2)}x`;
+        if (STATE.panels[1].status === 'PLACED') updatePanelButtonUI(1);
+        if (STATE.panels[2].status === 'PLACED') updatePanelButtonUI(2);
+        if (data.feed) {
+          STATE.feed = data.feed;
+          renderLiveBetsList();
+        }
+      });
+
+      socket.on('round:crashed', (data) => {
+        STATE.phase = 'CRASHED';
+        STATE.multiplier = Number(data.crashPoint || STATE.multiplier);
+        STATE.flyAwayProgress = 0.01;
+        STATE.lastFairnessProof = data.fairnessProof || null;
+        audio.playCrash();
+
+        if (Array.isArray(data.history)) {
+          STATE.history = data.history;
+          renderHistoryRibbon();
+        }
+        if (typeof data.previousRoundResult === 'number') STATE.previousRoundResult = data.previousRoundResult;
+        if (Array.isArray(data.previousRoundRows)) STATE.previousRoundRows = data.previousRoundRows;
+        if (Array.isArray(data.topWinners)) STATE.topWinners = data.topWinners;
+
+        if (STATE.activeBottomTab === 'previous') renderPreviousTab();
+        if (STATE.activeBottomTab === 'top') renderTopLeaderboard();
+        [1, 2].forEach((id) => {
+          if (STATE.panels[id].status === 'PLACED') STATE.panels[id].status = 'IDLE';
+        });
+        updateOverlaysForPhase();
+      });
+
+      socket.on('bet:cashed_out', (data) => {
+        if (typeof data.balance === 'number') {
+          STATE.balance = data.balance;
+          updateBalanceUI();
+        }
+        if (Array.isArray(data.betHistory)) STATE.myBetHistory = data.betHistory;
+        if (data.activeBets) applyPlayerPanels(data.activeBets, {});
+        audio.playCashOut(data.mult);
+        showToast(`Cashed out ${Number(data.winAmount).toFixed(2)} ETB (${Number(data.mult).toFixed(2)}x)`);
+      });
+
+      socket.on('player:sync', (data) => {
+        if (typeof data.balance === 'number') {
+          STATE.balance = data.balance;
+          updateBalanceUI();
+        }
+        if (Array.isArray(data.betHistory)) STATE.myBetHistory = data.betHistory;
+        if (data.activeBets || data.queuedBets) {
+          applyPlayerPanels(data.activeBets || {}, data.queuedBets || {});
+        }
+      });
+
+      socket.on('feed:update', (data) => {
+        if (data.feed) {
+          STATE.feed = data.feed;
+          renderLiveBetsList();
+        }
+      });
+
+      socket.on('chat:message', (msg) => {
+        appendChatMessage(msg);
+      });
+
+      socket.on('rain:update', (rain) => {
+        STATE.rainCount = rain.claimedCount;
+        STATE.rainMax = rain.maxClaims;
+        document.getElementById('rainQuantityText').innerHTML = `Quantity: <strong class="text-white">${rain.claimedCount} / ${rain.maxClaims}</strong>`;
+      });
+    }
+
+    window.onload = function () {
+      updateBalanceUI();
+      updateAvatarUI();
+      syncAudioControlsUI();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
