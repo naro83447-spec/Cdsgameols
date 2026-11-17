@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_BALANCE = Number(process.env.LITEGAMES_DEFAULT_BALANCE_ETB || 1000.00);
+const DEFAULT_BALANCE = Number(process.env.LITEGAMES_DEFAULT_BALANCE_ETB || 0);
 
 function roundMoney(v) {
   return Math.round((Number(v) || 0) * 100) / 100;
