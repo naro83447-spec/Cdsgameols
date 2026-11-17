@@ -1,0 +1,15 @@
+{
+  "name": "fast-keno-backend",
+  "version": "1.0.0",
+  "description": "Server-authoritative Fast Keno backend with Socket.IO",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
