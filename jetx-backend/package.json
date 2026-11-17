@@ -1,0 +1,15 @@
+{
+  "name": "jetx-game-backend",
+  "version": "1.0.0",
+  "description": "Standalone modular Socket.IO & Express backend for JetX crash game.",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
