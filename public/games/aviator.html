@@ -174,8 +174,8 @@
       </div>
 
       <div class="flex items-center gap-2.5">
-        <button id="balanceBtn" onclick="openTopUpModal()" title="Tap to add demo ETB" class="flex items-center gap-1 bg-[#1b1c1f] hover:bg-[#232529] px-2.5 py-1 rounded-full border border-[#2a2b30] transition">
-          <span id="balanceDisplay" class="text-[#38d354] font-bold text-[14px] tracking-tight">1,000.00</span>
+        <button id="balanceBtn" onclick="openTopUpModal()" title="Wallet balance" class="flex items-center gap-1 bg-[#1b1c1f] hover:bg-[#232529] px-2.5 py-1 rounded-full border border-[#2a2b30] transition">
+          <span id="balanceDisplay" class="text-[#38d354] font-bold text-[14px] tracking-tight">0.00</span>
           <span class="text-[#8e9096] text-[12px] font-medium">ETB</span>
         </button>
 
@@ -414,7 +414,7 @@
                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P2" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P3" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
                 </div>
-                <span id="allBetsCounter" class="text-[12px] font-bold text-white">435/435 <span class="text-[#8e9096] font-normal">Bets</span></span>
+                <span id="allBetsCounter" class="text-[12px] font-bold text-white">0/0 <span class="text-[#8e9096] font-normal">Bets</span></span>
               </div>
               <div class="w-36 h-1 bg-[#28292e] rounded-full overflow-hidden">
                 <div id="allBetsProgress" class="h-full bg-[#38d354] transition-all duration-200" style="width: 100%;"></div>
@@ -441,7 +441,7 @@
         <div id="contentPrevious" class="hidden flex-col flex-1">
           <div class="mx-3 my-2 py-2.5 bg-[#141517] rounded-xl border border-[#25262a] flex flex-col items-center">
             <span class="text-[11px] text-[#8e9096] mb-0.5">Round Result</span>
-            <span id="prevRoundResultText" class="text-[26px] font-extrabold mult-blue leading-none">1.77x</span>
+            <span id="prevRoundResultText" class="text-[26px] font-extrabold mult-blue leading-none">—</span>
           </div>
           <div class="px-3 py-1 grid grid-cols-12 text-[11px] text-[#7c7e85] font-medium">
             <div class="col-span-5">Player</div>
@@ -515,7 +515,7 @@
         <div class="h-2 bg-[#141517]"></div>
 
         <div class="divide-y divide-[#2a2b30] text-[#d0d2d6]">
-          <button onclick="openSimpleInfoModal('Free Bets', 'No active Free Bets right now. Watch the Live Chat for Admin Rain drops of 20.00 ETB!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>⭐</span><span>Free Bets</span></button>
+          <button onclick="openSimpleInfoModal('Bonuses', 'No active bonus is available. Deposits and wallet credits are controlled by the secure admin approval process.')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>⭐</span><span>Free Bets</span></button>
           <button onclick="openMyBetHistoryModal()" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>🕒</span><span>My Bet History</span></button>
           <button onclick="openSimpleInfoModal('Game Limits', 'Minimum Bet: 1.00 ETB • Maximum Bet: 10,000.00 ETB • Maximum Win per Bet: 500,000.00 ETB')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>💵</span><span>Game Limits</span></button>
           <button onclick="openSimpleInfoModal('How To Play', '1. Place one or two bets before takeoff.\n2. Watch the lucky plane fly and the multiplier grow.\n3. Press Cash Out before the plane flies away to multiply your bet!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>❓</span><span>How To Play</span></button>
@@ -1942,26 +1942,6 @@
       });
     }
 
-    function claimRainBonus() {
-      if (STATE.rainClaimed || !socket) return;
-      socket.emit('chat:claim_rain', { playerId: identity.playerId }, (res) => {
-        if (!res || !res.ok) {
-          showToast(res?.error || 'Could not claim Rain bonus');
-          return;
-        }
-        STATE.rainClaimed = true;
-        STATE.rainCount = res.claimedCount;
-        STATE.balance = res.balance;
-        updateBalanceUI();
-        audio.playRain();
-
-        document.getElementById('rainQuantityText').innerHTML = `Quantity: <strong class="text-white">${res.claimedCount} / ${res.maxClaims}</strong>`;
-        const btn = document.getElementById('claimRainBtn');
-        btn.textContent = '✓ Claimed 20.00 ETB';
-        btn.className = 'w-full py-2 rounded-full bg-[#2b4c26] text-[#9ec499] font-bold text-xs cursor-default';
-        showToast('+20.00 ETB Rain Bonus Added!');
-      });
-    }
 
     function renderFairnessModal(proof) {
       if (!proof) return;
