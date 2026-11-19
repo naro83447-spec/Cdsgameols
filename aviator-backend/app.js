@@ -40,6 +40,14 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
 
   const router = express.Router();
 
+  // Fail closed: legacy in-memory wallet actions are not approved for real-money play.
+  router.use((req, res, next) => {
+    if (req.method === 'POST' && ['/bet', '/cancel', '/cashout', '/topup'].includes(req.path)) {
+      return res.status(503).json({ status: 'error', message: 'Aviator wagering is disabled pending the secure Firestore wallet migration.' });
+    }
+    return next();
+  });
+
   router.get('/health', (_req, res) => {
     const round = gameRoom.engine.currentRound;
     res.json({
@@ -95,13 +103,6 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     if (!result.ok) {
       return res.status(400).json({ status: 'error', message: result.error });
     }
-    res.json({ status: 'success', ...result });
-  });
-
-  router.post('/topup', (req, res) => {
-    const uid = String(req.body?.playerId || req.get('X-Player-Id') || 'p_guest');
-    const amount = Number(req.body?.amount || 100);
-    const result = gameRoom.balanceManager.topUp(uid, amount);
     res.json({ status: 'success', ...result });
   });
 
