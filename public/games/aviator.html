@@ -1197,9 +1197,9 @@
     const identity = resolvePlayerIdentity();
 
     const STATE = {
-      balance: 1000.00,
+      balance: 0,
       phase: 'WAITING',
-      roundNumber: 1022303,
+      roundNumber: 0,
       multiplier: 1.00,
       waitTimeTotal: 5000,
       waitTimeLeft: 5000,
@@ -1220,9 +1220,9 @@
         1: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false },
         2: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false }
       },
-      feed: { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 },
+      feed: { rows: [], totalDisplayBets: 0, activeBetsLeft: 0, totalWin: 0 },
       previousRoundRows: [],
-      previousRoundResult: 1.77,
+      previousRoundResult: null,
       topWinners: []
     };
 
@@ -2058,20 +2058,6 @@
       document.getElementById('genericModal').classList.remove('hidden');
     }
 
-    function addDemoFunds(amt) {
-      if (socket && socket.connected) {
-        socket.emit('balance:topup', { playerId: identity.playerId, amount: amt }, (res) => {
-          if (res && typeof res.balance === 'number') {
-            STATE.balance = res.balance;
-            updateBalanceUI();
-            audio.playCashOut();
-            closeGenericModal();
-            showToast(`Added ${amt.toFixed(2)} ETB to demo wallet`);
-          }
-        });
-      }
-    }
-
     function openMyBetHistoryModal() {
       document.getElementById('genericModalTitle').textContent = 'My Bet History';
       if (!STATE.myBetHistory || STATE.myBetHistory.length === 0) {
@@ -2100,9 +2086,8 @@
     // ==========================================
     // 8. SOCKET.IO CONNECTION & EVENT HANDLERS
     // ==========================================
-    const socket = typeof io === 'function'
-      ? io({ auth: { playerId: identity.playerId, displayName: identity.displayName, avatarSeed: identity.avatarSeed } })
-      : null;
+    // No anonymous/localStorage identity is accepted. Firebase ID-token wiring is still pending.
+    const socket = null;
 
     if (socket) {
       socket.on('connect', () => {
