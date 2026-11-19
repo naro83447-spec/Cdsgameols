@@ -27,8 +27,9 @@ async function createDepositRequest(uid, input) {
   if (amount < MIN_DEPOSIT || amount > MAX_DEPOSIT) { const e = new Error(`Deposit must be between ${MIN_DEPOSIT} and ${MAX_DEPOSIT} ETB.`); e.status = 400; throw e; }
   if (reference.length < 5 || reference.length > 100 || !/^[a-zA-Z0-9._/-]+$/.test(reference)) { const e = new Error('Enter the Telebirr transaction reference exactly as shown on your receipt.'); e.status = 400; throw e; }
   const id = referenceId(uid, reference);
+  const globalReferenceId = crypto.createHash('sha256').update(reference.trim().toLowerCase()).digest('hex');
   const ref = userRef(uid).collection('depositRequests').doc(id);
-  const globalReferenceRef = getDb().collection('telebirrReferences').doc(id);
+  const globalReferenceRef = getDb().collection('telebirrReferences').doc(globalReferenceId);
   await getDb().runTransaction(async (tx) => {
     const [existing, globalReference] = await Promise.all([tx.get(ref), tx.get(globalReferenceRef)]);
     if (existing.exists || globalReference.exists) { const e = new Error('This Telebirr reference has already been submitted.'); e.status = 409; throw e; }
