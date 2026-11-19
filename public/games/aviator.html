@@ -1145,21 +1145,12 @@
     // 2. IDENTITY & SHARED STATE
     // ==========================================
     function resolvePlayerIdentity() {
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgUser && tgUser.id) {
-        return {
-          playerId: String(tgUser.id),
-          displayName: tgUser.first_name || tgUser.username || `u_${tgUser.id}`,
-          avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
-        };
-      }
       return {
         playerId: '',
         displayName: 'Guest',
         avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
       };
     }
-
     const identity = resolvePlayerIdentity();
 
     const STATE = {
