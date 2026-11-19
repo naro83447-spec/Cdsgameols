@@ -628,7 +628,7 @@
         }
 
         // Direct launch into the exact selected game!
-        function launchGame(slug) {
+        async function launchGame(slug) {
             const game = GAMES_CATALOG[slug];
             if (!game) return;
             activeGameSlug = slug;
@@ -639,11 +639,13 @@
 
             titleEl.innerText = game.title;
             updateBalanceUI();
-            if (!window.liteGamesFirebaseAuth || !window.liteGamesFirebaseAuth.currentUser) {
+            const user = window.liteGamesFirebaseAuth && window.liteGamesFirebaseAuth.currentUser;
+            if (!user) {
                 showNotification('መጀመሪያ በFirebase Email/Password ይግቡ።');
                 openAuthModal();
                 return;
             }
+            window.liteGamesFirebaseIdToken = await user.getIdToken();
             iframe.src = `${game.path}?embedded=1`;
 
             overlay.classList.remove('hidden');
