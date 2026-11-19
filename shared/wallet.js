@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_BALANCE = Number(process.env.LITEGAMES_DEFAULT_BALANCE_ETB || 1000.00);
+const DEFAULT_BALANCE = 0;
 
 function roundMoney(v) {
   return Math.round((Number(v) || 0) * 100) / 100;
@@ -19,80 +19,7 @@ class UnifiedWalletStore {
   constructor() {
     this.players = new Map();
     this.transactions = [];
-    this.topWinners = [
-      {
-        id: 'seed_w1',
-        game: 'Multi Hot 5',
-        badge: 'HOT 5',
-        badgeColor: 'amber',
-        user: '0730****65',
-        bet: 200,
-        win: 31104,
-        mult: 155.52,
-        roundId: 'MH5-8812',
-        createdAt: Date.now() - 180000
-      },
-      {
-        id: 'seed_w2',
-        game: 'Aviator',
-        badge: 'x45.2',
-        badgeColor: 'blue',
-        user: '0912****88',
-        bet: 225,
-        win: 10250,
-        mult: 45.2,
-        roundId: 'AV-40219',
-        createdAt: Date.now() - 320000
-      },
-      {
-        id: 'seed_w3',
-        game: 'Fast Keno',
-        badge: 'KENO',
-        badgeColor: 'emerald',
-        user: '0969****62',
-        bet: 500,
-        win: 15000,
-        mult: 30,
-        roundId: 'KN-263940',
-        createdAt: Date.now() - 480000
-      },
-      {
-        id: 'seed_w4',
-        game: 'Crazy Rocket',
-        badge: 'x18.4',
-        badgeColor: 'cyan',
-        user: '0940****11',
-        bet: 300,
-        win: 5520,
-        mult: 18.4,
-        roundId: 'RK-9104',
-        createdAt: Date.now() - 620000
-      },
-      {
-        id: 'seed_w5',
-        game: 'JetX',
-        badge: 'x24.5',
-        badgeColor: 'indigo',
-        user: '0911****04',
-        bet: 400,
-        win: 9800,
-        mult: 24.5,
-        roundId: 'JX-3310',
-        createdAt: Date.now() - 780000
-      },
-      {
-        id: 'seed_w6',
-        game: '888 Dragons',
-        badge: 'x100',
-        badgeColor: 'amber',
-        user: '0923****77',
-        bet: 100,
-        win: 10000,
-        mult: 100,
-        roundId: 'DR-1042',
-        createdAt: Date.now() - 920000
-      }
-    ];
+    this.topWinners = [];
   }
 
   ensurePlayer(playerId, displayName = '') {
