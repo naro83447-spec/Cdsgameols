@@ -27,13 +27,15 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
   const app = existingApp || express();
   const httpServer = existingHttpServer || http.createServer(app);
 
+  const allowedOrigins = String(process.env.CORS_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean);
+
   if (!existingApp) {
-    app.use(cors());
+    app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : false }));
     app.use(express.json({ limit: '2mb' }));
   }
 
   const io = existingIo || new Server(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: allowedOrigins.length ? allowedOrigins : false, methods: ['GET', 'POST'] }
   });
 
   // Aviator gets its own namespace so its Firebase auth requirement does not break other games.
