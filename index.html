@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lite Games - የጨዋታ መድረክ</title>
     <meta name="description" content="Lite Games Amharic multi-game platform connecting Aviator, Fast Keno, Crazy Rocket, Multi Hot 5, JetX, and 888 Dragons with a single unified ETB wallet.">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script>
+      // Public Firebase Web App configuration. Never place Admin SDK credentials here.
+      const firebaseConfig = {
+        apiKey: "AIzaSyBtImQ0SJge5loDrTH09ohs-jHqyxxf1es",
+        authDomain: "gamesporo18.firebaseapp.com",
+        projectId: "gamesporo18",
+        storageBucket: "gamesporo18.firebasestorage.app",
+        messagingSenderId: "885994523343",
+        appId: "1:885994523343:web:89b9f284f68a35b31405ba"
+      };
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      window.liteGamesFirebaseAuth = firebase.auth();
+      // Keep Firebase auth in this page's memory only; sign in again after a full reload.
+      window.liteGamesFirebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(console.error);
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -71,6 +88,7 @@
                 <span id="balance-text" class="text-xs font-semibold text-white tracking-wide">0.00 ETB</span>
                 <i id="eye-icon" class="fa-solid fa-eye-slash text-xs text-gray-400 cursor-pointer hover:text-white" onclick="toggleBalance()"></i>
             </div>
+            <button id="auth-action-btn" onclick="openAuthModal()" class="bg-[#182035] border border-gray-700 text-cyan-300 font-medium text-xs px-3 py-2 rounded-full transition">ግባ</button>
             <button onclick="openDepositModal()" class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-medium text-xs px-3.5 py-2 rounded-full shadow-md shadow-blue-600/30 flex items-center space-x-1.5 transition active:scale-95">
                 <i class="fa-solid fa-plus text-[10px]"></i>
                 <span>ገንዘብ አሁጉ</span>
@@ -402,19 +420,10 @@
         };
 
         // Unified Player Identity shared across Lite Games + all 6 games
+        // Wallet identity is always the verified Firebase Auth UID on the server.
         function getUnifiedPlayerId() {
-            let pid = localStorage.getItem('litegames_player_id')
-                || localStorage.getItem('aviator_player_id')
-                || localStorage.getItem('shamo_keno_player_id')
-                || localStorage.getItem('shamo_rocket_player_id')
-                || localStorage.getItem('mh5_player_id')
-                || localStorage.getItem('jetx_player_id')
-                || localStorage.getItem('dragons_player_id');
-            if (!pid) {
-                pid = '09' + Math.floor(10 + Math.random() * 89) + 'lg' + Math.floor(1000 + Math.random() * 8999);
-            }
-            localStorage.setItem('litegames_player_id', pid);
-            return pid;
+            const user = window.liteGamesFirebaseAuth && window.liteGamesFirebaseAuth.currentUser;
+            return user ? user.uid : 'Not signed in';
         }
 
         const PLAYER_ID = getUnifiedPlayerId();
@@ -438,6 +447,56 @@
             const frameEl = document.getElementById('frame-balance-text');
             if (el) el.innerText = text;
             if (frameEl) frameEl.innerText = formatMoney(currentBalance);
+        }
+
+        function openAuthModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            const user = window.liteGamesFirebaseAuth.currentUser;
+            if (user) {
+                content.innerHTML = `
+                    <h3 class="font-bold text-white text-base mb-2">Firebase Account</h3>
+                    <p class="text-gray-300 text-xs mb-4 break-all">${user.email || user.uid}</p>
+                    <button onclick="signOutLiteGames()" class="w-full bg-rose-600 text-white font-semibold py-2.5 rounded-xl text-sm">ውጣ (Sign out)</button>`;
+            } else {
+                content.innerHTML = `
+                    <h3 class="font-bold text-white text-base mb-1">የGamesporo መለያ</h3>
+                    <p class="text-gray-400 text-xs mb-4">በEmail እና Password ይግቡ ወይም አዲስ መለያ ይፍጠሩ።</p>
+                    <div class="space-y-3 text-left">
+                      <input id="auth-email" type="email" autocomplete="email" placeholder="Email" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm">
+                      <input id="auth-password" type="password" autocomplete="current-password" placeholder="Password (ቢያንስ 6 ቁምፊ)" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm">
+                      <button onclick="signInLiteGames()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold py-2.5 rounded-xl text-sm">ግባ</button>
+                      <button onclick="registerLiteGames()" class="w-full bg-[#26334c] text-cyan-300 font-semibold py-2.5 rounded-xl text-sm">አዲስ መለያ ፍጠር</button>
+                    </div>`;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        async function signInLiteGames() {
+            const email = document.getElementById('auth-email')?.value?.trim();
+            const password = document.getElementById('auth-password')?.value || '';
+            try {
+                await window.liteGamesFirebaseAuth.signInWithEmailAndPassword(email, password);
+                closeModal();
+                showNotification('በተሳካ ሁኔታ ገብተዋል።');
+            } catch (error) { showNotification(error.message || 'መግባት አልተሳካም።'); }
+        }
+
+        async function registerLiteGames() {
+            const email = document.getElementById('auth-email')?.value?.trim();
+            const password = document.getElementById('auth-password')?.value || '';
+            try {
+                await window.liteGamesFirebaseAuth.createUserWithEmailAndPassword(email, password);
+                closeModal();
+                showNotification('መለያዎ ተፈጥሯል።');
+            } catch (error) { showNotification(error.message || 'መለያ መፍጠር አልተሳካም።'); }
+        }
+
+        async function signOutLiteGames() {
+            await window.liteGamesFirebaseAuth.signOut();
+            window.liteGamesFirebaseIdToken = '';
+            closeModal();
+            showNotification('ከመለያዎ ወጥተዋል።');
         }
 
         async function getFirebaseIdToken() {
@@ -580,7 +639,12 @@
 
             titleEl.innerText = game.title;
             updateBalanceUI();
-            iframe.src = `${game.path}?playerId=${encodeURIComponent(PLAYER_ID)}&displayName=${encodeURIComponent(playerDisplayName)}&embedded=1`;
+            if (!window.liteGamesFirebaseAuth || !window.liteGamesFirebaseAuth.currentUser) {
+                showNotification('መጀመሪያ በFirebase Email/Password ይግቡ።');
+                openAuthModal();
+                return;
+            }
+            iframe.src = `${game.path}?embedded=1`;
 
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
@@ -851,18 +915,20 @@
             applyCustomLogos();
             syncFavoriteStars();
             refreshBalance(false);
-            const auth = window.liteGamesFirebaseAuth || window.firebaseAuth || null;
-            if (auth && typeof auth.onAuthStateChanged === 'function') {
-                auth.onAuthStateChanged((user) => {
-                    if (!user) {
-                        window.liteGamesFirebaseIdToken = '';
-                        currentBalance = 0;
-                        updateBalanceUI();
-                        return;
-                    }
-                    refreshBalance(false);
-                });
-            }
+            const auth = window.liteGamesFirebaseAuth;
+            auth.onAuthStateChanged(async (user) => {
+                const action = document.getElementById('auth-action-btn');
+                if (!user) {
+                    window.liteGamesFirebaseIdToken = '';
+                    currentBalance = 0;
+                    updateBalanceUI();
+                    if (action) action.textContent = 'ግባ';
+                    return;
+                }
+                window.liteGamesFirebaseIdToken = await user.getIdToken();
+                if (action) action.textContent = 'ውጣ';
+                refreshBalance(false);
+            });
             loadWinners();
         });
     </script>
