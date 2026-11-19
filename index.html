@@ -443,10 +443,13 @@
         async function getFirebaseIdToken() {
             const auth = window.liteGamesFirebaseAuth || window.firebaseAuth || null;
             const user = auth && auth.currentUser;
-            if (!user || typeof user.getIdToken !== 'function') {
-                throw new Error('Firebase sign-in required.');
+            if (user && typeof user.getIdToken === 'function') {
+                const token = await user.getIdToken();
+                window.liteGamesFirebaseIdToken = token;
+                return token;
             }
-            return user.getIdToken();
+            if (window.liteGamesFirebaseIdToken) return String(window.liteGamesFirebaseIdToken);
+            throw new Error('Firebase sign-in required.');
         }
 
         async function refreshBalance(showToast = false) {
