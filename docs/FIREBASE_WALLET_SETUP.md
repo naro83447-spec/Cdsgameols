@@ -1,4 +1,4 @@
-# Gamesporo18 Firestore wallet setup
+# gamesporo18 Firestore wallet setup
 
 This branch contains a server-side Firestore wallet foundation. It is deliberately fail-closed: Aviator bets, cancellations and cash-outs remain disabled until the full game integration and tests are complete.
 
@@ -6,8 +6,8 @@ This branch contains a server-side Firestore wallet foundation. It is deliberate
 
 Set these values in the server environment, never in GitHub source files:
 
-- `FIREBASE_PROJECT_ID=Gamesporo18`
-- `FIREBASE_SERVICE_ACCOUNT_JSON` **or** `FIREBASE_SERVICE_ACCOUNT_BASE64`: service-account credentials from the Gamesporo18 Firebase project. Keep this secret private.
+- `FIREBASE_PROJECT_ID=gamesporo18`
+- `FIREBASE_SERVICE_ACCOUNT_JSON` **or** `FIREBASE_SERVICE_ACCOUNT_BASE64`: service-account credentials from the gamesporo18 Firebase project. Keep this secret private.
 - `FIREBASE_ADMIN_UIDS`: comma-separated Firebase Authentication UIDs authorized to review deposits. Do not use a Telegram ID or an email address here.
 - `CORS_ORIGINS`: comma-separated exact HTTPS origins allowed to call the API and Aviator Socket.IO namespace, for example the production site origin. Do not include paths or trailing slashes.
 
@@ -15,10 +15,10 @@ The Firebase web configuration (API key, auth domain, app ID and related public 
 
 ## Firestore deployment
 
-From the repository root, after selecting the Gamesporo18 Firebase project:
+From the repository root, after selecting the gamesporo18 Firebase project:
 
 ```sh
-firebase use Gamesporo18
+firebase use gamesporo18
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
