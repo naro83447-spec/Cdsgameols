@@ -1509,12 +1509,12 @@
     // 5. LIVE FEED, PREVIOUS & TOP LEADERBOARD
     // ==========================================
     function renderLiveBetsList() {
-      const feed = STATE.feed || { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 };
-      const totalDisplayBets = feed.totalDisplayBets || 435;
+      const feed = STATE.feed || { rows: [], totalDisplayBets: 0, activeBetsLeft: 0, totalWin: 0 };
+      const totalDisplayBets = Number(feed.totalDisplayBets || 0);
       const activeBetsLeft = feed.activeBetsLeft ?? totalDisplayBets;
 
       document.getElementById('allBetsCounter').innerHTML = `${activeBetsLeft}/${totalDisplayBets} <span class="text-[#8e9096] font-normal">Bets</span>`;
-      document.getElementById('allBetsProgress').style.width = `${(activeBetsLeft / totalDisplayBets) * 100}%`;
+      document.getElementById('allBetsProgress').style.width = `${totalDisplayBets > 0 ? (activeBetsLeft / totalDisplayBets) * 100 : 0}%`;
       document.getElementById('activeFlightCount').textContent = activeBetsLeft;
       document.getElementById('totalWinEtb').textContent = Number(feed.totalWin || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -2044,18 +2044,10 @@
     }
 
     function openTopUpModal() {
-      document.getElementById('genericModalTitle').textContent = 'Demo Balance Top-Up';
-      document.getElementById('genericModalBody').innerHTML = `
-        <div class="flex flex-col gap-3">
-          <p class="text-[#b0b2b8]">Current Balance: <strong class="text-[#38d354]">${STATE.balance.toFixed(2)} ETB</strong></p>
-          <div class="grid grid-cols-3 gap-2">
-            <button onclick="addDemoFunds(100)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+100 ETB</button>
-            <button onclick="addDemoFunds(500)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+500 ETB</button>
-            <button onclick="addDemoFunds(2000)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+2000 ETB</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('genericModal').classList.remove('hidden');
+      openSimpleInfoModal(
+        'Wallet unavailable',
+        'Demo top-ups have been removed. Real deposits will be available only after Firebase sign-in and admin-approved Telebirr funding are connected.'
+      );
     }
 
     function openMyBetHistoryModal() {
