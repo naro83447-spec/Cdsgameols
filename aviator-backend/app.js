@@ -55,7 +55,14 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
   const initialRoundId = Number(process.env.AVIATOR_INITIAL_ROUND_ID || (Date.now() + Math.floor(Math.random() * 1000)));
   const gameRoom = new AviatorGameRoom({ initialRoundId });
   gameRoom.attachSocketIO(aviatorIo);
-  gameRoom.start();
+  const firebaseConfigured = Boolean(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_BASE64
+  );
+  if (firebaseConfigured) {
+    gameRoom.start();
+  } else {
+    console.warn('[aviator] engine remains stopped until Firebase Admin credentials are configured.');
+  }
 
   const router = express.Router();
 
