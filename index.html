@@ -419,7 +419,7 @@
 
         const PLAYER_ID = getUnifiedPlayerId();
         let playerDisplayName = localStorage.getItem('litegames_player_name') || '';
-        let currentBalance = 1000.00;
+        let currentBalance = 0.00;
         let balanceVisible = true;
         let activeGameSlug = null;
         let favoritesOnly = false;
@@ -597,7 +597,7 @@
                     <i class="fa-solid fa-wallet"></i>
                 </div>
                 <h3 class="font-bold text-white text-base mb-1">ገንዘብ ያስገቡ</h3>
-                <p class="text-gray-400 text-xs mb-4">በቴሌብር (Telebirr) ወይም ባንክ አካውንት ሒሳብዎን ወዲያውኑ ይሙሉ</p>
+                <p class="text-amber-300 text-xs mb-4">የFirestore እና Admin Approval የደህንነት ማሻሻያ እስኪጠናቀቅ ድረስ ዲፖዚት ለጊዜው ተዘግቷል።</p>
                 <div class="grid grid-cols-4 gap-2 mb-3">
                     <button onclick="document.getElementById('dep-amount').value=100" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">100</button>
                     <button onclick="document.getElementById('dep-amount').value=500" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">500</button>
