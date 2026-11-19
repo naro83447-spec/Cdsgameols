@@ -258,7 +258,7 @@
         <div id="crashedOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-black/25">
           <div class="text-[17px] font-bold tracking-wider text-white uppercase mb-1 drop-shadow">FLEW AWAY!</div>
           <div id="crashedMultiplierText" class="text-[48px] sm:text-[54px] font-extrabold text-[#e50914] tracking-tight leading-none drop-shadow-[0_2px_16px_rgba(229,9,20,0.5)]">
-            1.77x
+            —
           </div>
         </div>
 
@@ -268,7 +268,7 @@
             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Milo" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
           </div>
-          <span id="activeFlightCount" class="text-[11px] font-bold text-white">435</span>
+          <span id="activeFlightCount" class="text-[11px] font-bold text-white">0</span>
         </div>
       </div>
     </div>
@@ -535,41 +535,12 @@
         <div class="h-12 px-3 bg-[#1b1c1f] border-b border-[#2a2b30] flex items-center justify-between">
           <button onclick="toggleChatDrawer()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-white">‹</button>
           <div class="text-[13px] font-semibold text-[#b0b2b8]">
-            Online: <span id="onlinePlayersCount" class="text-[#38d354] font-bold">1080</span>
+            Online: <span id="onlinePlayersCount" class="text-[#38d354] font-bold">0</span>
           </div>
           <button onclick="toggleChatRulesModal()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-[#b0b2b8] hover:text-white font-serif italic font-bold">i</button>
         </div>
 
         <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
-          <div class="bg-[#23471e] border border-[#3a7531] rounded-2xl p-3 shadow-lg">
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-[#1d63b8] flex items-center justify-center font-bold text-xs">B</div>
-                <span class="text-[#f59e0b] font-bold text-xs">Admin</span>
-                <span class="bg-[#e50914] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Admin</span>
-                <span class="text-[10px] text-[#a3c29e]">19:19</span>
-              </div>
-              <div class="flex items-center gap-1 text-[#d4f7cf] font-bold text-xs">
-                <span>🪙</span>
-                <span>20.00 ETB</span>
-              </div>
-            </div>
-
-            <div class="bg-[#183314] rounded-xl p-2.5 border border-[#2c5925]">
-              <div class="flex items-center justify-between text-xs mb-2">
-                <div class="flex items-center gap-1.5 text-[#a3c29e] font-semibold">
-                  <span>🌧️</span><span>Rain</span>
-                </div>
-                <span id="rainQuantityText" class="text-[#a3c29e]">Quantity: <strong class="text-white">3 / 25</strong></span>
-              </div>
-              <button id="claimRainBtn" onclick="claimRainBonus()" class="w-full py-2 rounded-full bg-[#38d354] hover:bg-[#2eb846] text-black font-extrabold text-xs transition shadow">
-                Claim 20.00 ETB Free Bet
-              </button>
-            </div>
-            <div class="text-center text-[11px] text-[#c7ebc3] mt-2 font-medium">
-              Total: <strong class="text-white">500.00 ETB</strong>
-            </div>
-          </div>
           <div id="chatDynamicMessages" class="flex flex-col gap-2.5"></div>
         </div>
 
@@ -1182,14 +1153,9 @@
           avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
         };
       }
-      let storedId = localStorage.getItem('aviator_player_id');
-      if (!storedId) {
-        storedId = 'p_' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem('aviator_player_id', storedId);
-      }
       return {
-        playerId: storedId,
-        displayName: 'd***u',
+        playerId: '',
+        displayName: 'Guest',
         avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
       };
     }
@@ -1211,8 +1177,8 @@
       topFilterType: 'x',
       topFilterPeriod: 'day',
       rainClaimed: false,
-      rainCount: 3,
-      rainMax: 25,
+      rainCount: 0,
+      rainMax: 0,
       history: [],
       myBetHistory: [],
       lastFairnessProof: null,
