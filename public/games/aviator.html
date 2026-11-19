@@ -2133,6 +2133,16 @@
         }
       });
 
+      socket.on('history:update', (data) => {
+        if (Array.isArray(data.history)) {
+          STATE.history = data.history;
+          renderHistoryRibbon();
+        }
+        if (typeof data.previousRoundResult === 'number') {
+          STATE.previousRoundResult = data.previousRoundResult;
+        }
+      });
+
       socket.on('round:crashed', (data) => {
         STATE.phase = 'CRASHED';
         STATE.multiplier = Number(data.crashPoint || STATE.multiplier);
