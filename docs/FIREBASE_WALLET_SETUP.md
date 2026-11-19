@@ -11,7 +11,7 @@ Set these values in the server environment, never in GitHub source files:
 - `FIREBASE_ADMIN_UIDS`: comma-separated Firebase Authentication UIDs authorized to review deposits. Do not use a Telegram ID or an email address here.
 - `CORS_ORIGINS`: comma-separated exact HTTPS origins allowed to call the API and Aviator Socket.IO namespace, for example the production site origin. Do not include paths or trailing slashes.
 
-The Firebase web configuration (API key, auth domain, app ID and related public client values) is not configured in this repository yet. The browser must obtain a Firebase Authentication ID token and pass it to the API as a Bearer token and to the Aviator Socket.IO namespace as `auth.idToken`. A localStorage player ID or Telegram `initDataUnsafe` is not authentication.
+The Firebase web configuration (API key, auth domain, app ID and related public client values) is not configured in this repository yet. The browser must obtain a Firebase Authentication ID token and pass it to the API as a Bearer token and to the Aviator Socket.IO namespace as `auth.idToken`. The Aviator iframe accepts the short-lived token through the in-memory `window.liteGamesFirebaseIdToken` value supplied by the host auth layer. A localStorage player ID or Telegram `initDataUnsafe` is not authentication.
 
 ## Firestore deployment
 
