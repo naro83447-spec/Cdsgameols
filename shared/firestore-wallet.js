@@ -28,10 +28,12 @@ async function createDepositRequest(uid, input) {
   if (reference.length < 5 || reference.length > 100 || !/^[a-zA-Z0-9._/-]+$/.test(reference)) { const e = new Error('Enter the Telebirr transaction reference exactly as shown on your receipt.'); e.status = 400; throw e; }
   const id = referenceId(uid, reference);
   const ref = userRef(uid).collection('depositRequests').doc(id);
+  const globalReferenceRef = getDb().collection('telebirrReferences').doc(id);
   await getDb().runTransaction(async (tx) => {
-    const existing = await tx.get(ref);
-    if (existing.exists) { const e = new Error('This Telebirr reference has already been submitted.'); e.status = 409; throw e; }
+    const [existing, globalReference] = await Promise.all([tx.get(ref), tx.get(globalReferenceRef)]);
+    if (existing.exists || globalReference.exists) { const e = new Error('This Telebirr reference has already been submitted.'); e.status = 409; throw e; }
     tx.create(ref, { uid, amount, currency: 'ETB', method: 'TELEBIRR', telebirrReference: reference, status: 'PENDING', createdAt: serverTimestamp(), reviewedAt: null, reviewedBy: null });
+    tx.create(globalReferenceRef, { uid, requestId: id, createdAt: serverTimestamp() });
   });
   return { requestId: id, amount, status: 'PENDING' };
 }
