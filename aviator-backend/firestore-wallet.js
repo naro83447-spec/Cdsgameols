@@ -165,10 +165,38 @@ async function settleLoss({ uid, roundId, panelId = 1 }) {
   });
 }
 
+async function getRoundHistory(limit = 42) {
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 42));
+  const snap = await getDb().collection('aviatorRounds').orderBy('createdAt', 'desc').limit(200).get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((round) => round.status === 'CRASHED' && Number.isFinite(Number(round.crashPoint)))
+    .slice(0, safeLimit)
+    .map((round) => ({
+      roundId: round.roundId,
+      crashPoint: Number(round.crashPoint),
+      serverSeedHash: round.serverSeedHash,
+      fairnessProof: round.fairnessProof || null,
+      crashedAt: round.crashedAt || null
+    }));
+}
+
+async function getRoundProof(roundId) {
+  const snap = await roundRef(roundId).get();
+  if (!snap.exists || snap.data().status !== 'CRASHED') return null;
+  const data = snap.data();
+  return {
+    roundId: data.roundId,
+    serverSeedHash: data.serverSeedHash,
+    crashPoint: data.crashPoint,
+    fairnessProof: data.fairnessProof || null
+  };
+}
+
 async function getBetHistory(uid, limit = 50) {
   const player = requireUid(uid);
   const snap = await getDb().collection('aviatorBets').where('uid', '==', player).orderBy('createdAt', 'desc').limit(Math.min(100, Math.max(1, Number(limit) || 50))).get();
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-module.exports = { ensureWallet, createRound, startRound, crashRound, placeBet, cancelBet, cashOut, settleLoss, getBetHistory };
+module.exports = { ensureWallet, createRound, startRound, crashRound, placeBet, cancelBet, cashOut, settleLoss, getBetHistory, getRoundHistory, getRoundProof };
