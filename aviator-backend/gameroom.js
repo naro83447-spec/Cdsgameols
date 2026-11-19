@@ -259,19 +259,19 @@ class AviatorGameRoom {
       });
 
       socket.on('bet:cancel', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         const res = this.cancelBet({ playerId: pid, panelId: payload.panelId });
         if (typeof ack === 'function') ack(res);
       });
 
       socket.on('bet:cashout', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         const res = this.cashOut({ playerId: pid, panelId: payload.panelId });
         if (typeof ack === 'function') ack(res);
       });
 
       socket.on('panel:autocash', (payload = {}) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         if (this.engine.currentRound) {
           this.engine.currentRound.updateAutoCashOut(pid, payload.panelId, payload.autoCashOut);
         }
@@ -282,13 +282,13 @@ class AviatorGameRoom {
       });
 
       socket.on('avatar:update', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         const acc = this.balanceManager.updateAvatar(pid, payload.avatarSeed);
         if (typeof ack === 'function') ack({ ok: true, avatarSeed: acc.avatarSeed });
       });
 
       socket.on('chat:send', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         const acc = this.balanceManager.ensureAccount(pid);
         const text = String(payload.text || '').trim().slice(0, 160);
         if (!text) return typeof ack === 'function' && ack({ ok: false });
