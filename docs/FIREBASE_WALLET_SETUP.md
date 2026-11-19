@@ -11,7 +11,7 @@ Set these values in the server environment, never in GitHub source files:
 - `FIREBASE_ADMIN_UIDS`: comma-separated Firebase Authentication UIDs authorized to review deposits. Do not use a Telegram ID or an email address here.
 - `CORS_ORIGINS`: comma-separated exact HTTPS origins allowed to call the API and Aviator Socket.IO namespace, for example the production site origin. Do not include paths or trailing slashes.
 
-The Firebase web configuration (API key, auth domain, app ID and related public client values) is not configured in this repository yet. The browser must obtain a Firebase Authentication ID token and pass it to the API as a Bearer token and to the Aviator Socket.IO namespace as `auth.idToken`. The Aviator iframe accepts the short-lived token through the in-memory `window.liteGamesFirebaseIdToken` value supplied by the host auth layer. A localStorage player ID or Telegram `initDataUnsafe` is not authentication.
+The Firebase Web SDK configuration is now installed in `index.html`, with Email/Password sign-in and account registration. Firebase Auth persistence is set to in-memory only; users must sign in again after a full page reload. The browser obtains a Firebase Authentication ID token and passes it to the API as a Bearer token and to the Aviator iframe through the in-memory `window.liteGamesFirebaseIdToken` value. The iframe no longer creates or copies legacy localStorage player IDs. A localStorage player ID or Telegram `initDataUnsafe` is not authentication.
 
 ## Firestore deployment
 
@@ -39,6 +39,6 @@ The rules in `firestore.rules` deny direct client access to wallet, deposit, led
 - Player HTTP state/history and Aviator sockets require verified Firebase ID tokens.
 - Socket player identity comes from the verified token, not from request payloads.
 - The current bet/cancel/cash-out entry points intentionally reject wagers. The Firestore transaction service is present, but the live game loop has not yet been switched over to it end-to-end.
-- Browser Firebase sign-in wiring is still pending because the public Firebase web configuration and chosen sign-in provider have not been supplied/configured.
+- Browser Email/Password sign-in and account registration are wired in `index.html`; they still require a live browser/Firebase test against the deployed site.
 
 Do not enable real-money play or merge this branch as production-ready until browser authentication, Firestore round/bet concurrency, bet debit/refund/payout settlement, crash recovery, fairness verification and the full automated test suite have been validated.
