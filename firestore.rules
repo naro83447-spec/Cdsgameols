@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Monetary records are server-owned. Firebase Admin SDK bypasses these rules.
+    match /users/{uid} {
+      allow read, write: if false;
+      match /private/{document=**} {
+        allow read, write: if false;
+      }
+      match /transactions/{document=**} {
+        allow read, write: if false;
+      }
+      match /depositRequests/{document=**} {
+        allow read, write: if false;
+      }
+    }
+    // Default deny: add narrowly scoped rules only for non-financial public data.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
