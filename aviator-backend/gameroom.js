@@ -1,22 +1,5 @@
 const { AviatorBalanceManager, roundMoney } = require('./balance');
 const { AviatorEngine, PHASES } = require('./engine');
-const { generateRoundFairness } = require('./fairness');
-
-const INITIAL_HISTORY = [
-  4.48, 1.77, 2.26, 5.09, 9.32, 1.52, 9.14,
-  1.08, 1.49, 4.91, 8.72, 4.37, 3.75, 1.55,
-  1.00, 5.62, 1.06, 16.31, 2.36, 1.37, 7.98,
-  6.03, 3.48, 1.31, 1.10, 30.77, 4.18, 1.10,
-  2.78, 1.54, 1.18, 2.49, 1.03, 1.92, 2.97
-];
-
-const INITIAL_TOP_WINNERS = [
-  { user: 'k***a', date: '16.11.26', bet: 2.00, mult: 855.10, win: 1710.20, roundMax: 1033.61, roundId: 1022302 },
-  { user: 'x***t', date: '16.11.26', bet: 2.00, mult: 534.30, win: 1068.60, roundMax: 1033.61, roundId: 1022302 },
-  { user: 'd***m', date: '16.11.26', bet: 4.00, mult: 391.73, win: 1566.93, roundMax: 513.86, roundId: 1022189 },
-  { user: 'n***a', date: '16.11.26', bet: 4.00, mult: 302.22, win: 1208.88, roundMax: 317.78, roundId: 1022114 },
-  { user: 'f***m', date: '16.11.26', bet: 20.00, mult: 323.34, win: 6466.83, roundMax: 333.49, roundId: 1022045 }
-];
 
 class AviatorGameRoom {
   constructor(options = {}) {
@@ -29,30 +12,14 @@ class AviatorGameRoom {
     this.queuedBets = new Map();    // `${playerId}:${panelId}` -> queuedBetObj
     this._txSeq = 0;
 
-    this.history = [...INITIAL_HISTORY];
-    this.previousRoundResult = 1.77;
+    this.history = [];
+    this.previousRoundResult = null;
     this.previousRoundRows = [];
-    this.topWinners = [...INITIAL_TOP_WINNERS];
+    this.topWinners = [];
     this.fairnessArchive = new Map();
 
-    // Seed proof for round 1022302 & historical top rounds
-    this.fairnessArchive.set(1022302, {
-      ...generateRoundFairness({ roundId: 1022302 }),
-      crashPoint: 1033.61
-    });
-
-    this.chatMessages = [
-      { id: 'seed1', user: 'o***k', text: 'በአራዳን ነው ሚለው ወንድም', time: '19:16', isAdmin: false },
-      { id: 'seed2', user: 'w***g', text: '@c***b አንተ ሙድ ለምን ትይዛለህ በናትህ', time: '19:17', isAdmin: false },
-      { id: 'seed3', user: 'e***a', text: 'Admin', time: '19:18', isAdmin: false }
-    ];
-    this.activeRain = {
-      rainId: 'rain_1',
-      amount: 20.00,
-      totalPool: 500.00,
-      claimedCount: 3,
-      maxClaims: 25
-    };
+    this.chatMessages = [];
+    this.activeRain = null;
 
     this._bindEngineEvents();
   }
@@ -150,9 +117,6 @@ class AviatorGameRoom {
         multiplier: data.multiplier,
         elapsedMs: data.elapsedMs
       };
-      if (data.botsChanged && this.engine.currentRound) {
-        payload.feed = this.engine.currentRound.getFeedRows();
-      }
       this.io.to(this.roomId).emit('round:tick', payload);
     });
 
@@ -207,229 +171,20 @@ class AviatorGameRoom {
     });
   }
 
-  _executeCashOut(bet, exactMultiplier) {
-    const round = this.engine.currentRound;
-    if (!round || round.phase !== PHASES.FLYING || bet.status !== 'PLACED') {
-      return { ok: false, error: 'Cannot cash out right now' };
-    }
-
-    const mult = roundMoney(exactMultiplier || round.multiplier);
-    if (mult >= round.crashPoint) {
-      return { ok: false, error: 'Plane already flew away!' };
-    }
-
-    const credit = this.balanceManager.creditCashOut({
-      playerId: bet.playerId,
-      amount: bet.bet,
-      multiplier: mult,
-      roundId: round.roundId,
-      betKey: bet.ledgerKey || bet.betKey
-    });
-
-    bet.status = 'CASHED_OUT';
-    bet.cashedOut = true;
-    bet.cashMult = mult;
-    bet.winAmount = credit.winAmount;
-
-    // Update Top Leaderboard if big win
-    if (credit.winAmount >= 20 || mult >= 5) {
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const yy = String(now.getFullYear()).slice(-2);
-      this.topWinners.unshift({
-        user: bet.name,
-        date: `${dd}.${mm}.${yy}`,
-        bet: bet.bet,
-        mult,
-        win: credit.winAmount,
-        roundMax: round.crashPoint || mult,
-        roundId: round.roundId
-      });
-      this.topWinners.sort((a, b) => b.mult - a.mult);
-      if (this.topWinners.length > 25) this.topWinners.length = 25;
-    }
-
-    this._emitToPlayer(bet.playerId, 'bet:cashed_out', {
-      panelId: bet.panelId,
-      roundId: round.roundId,
-      bet: bet.bet,
-      mult,
-      winAmount: credit.winAmount,
-      balance: credit.balance,
-      activeBets: round.getPlayerActiveBets(bet.playerId),
-      betHistory: this.balanceManager.getBetHistory(bet.playerId, 40)
-    });
-
-    if (this.io) {
-      this.io.to(this.roomId).emit('feed:update', {
-        roundId: round.roundId,
-        feed: round.getFeedRows()
-      });
-    }
-
-    return {
-      ok: true,
-      panelId: bet.panelId,
-      mult,
-      winAmount: credit.winAmount,
-      balance: credit.balance
-    };
+  _executeCashOut() {
+    return { ok: false, error: 'Aviator wagering is disabled until the secure Firestore wallet migration and security tests are complete.' };
   }
 
-  placeBet({ playerId, panelId = 1, amount, autoCashOut = null, clientSeed = '', displayName = '', avatarSeed = '' }) {
-    const acc = this.balanceManager.ensureAccount(playerId, { displayName, avatarSeed });
-    const pId = Number(panelId) === 2 ? 2 : 1;
-    const round = this.engine.currentRound;
-
-    if (!round) return { ok: false, error: 'Game engine initializing' };
-
-    const qKey = `${acc.playerId}:${pId}`;
-    const existingActive = round.bets.get(`${round.roundId}:${acc.playerId}:${pId}`);
-    if ((existingActive && existingActive.status === 'PLACED') || this.queuedBets.has(qKey)) {
-      return { ok: false, error: 'Bet already active on this panel' };
-    }
-
-    this._txSeq += 1;
-    const opKey = `tx_${round.roundId}_${acc.playerId}_${pId}_${this._txSeq}`;
-
-    const debit = this.balanceManager.debitBet({
-      playerId: acc.playerId,
-      amount,
-      roundId: round.roundId,
-      betKey: opKey
-    });
-
-    if (!debit.ok) {
-      return { ok: false, error: debit.error, balance: debit.balance };
-    }
-
-    // Immediate placement if WAITING
-    if (round.phase === PHASES.WAITING) {
-      const added = round.addRealBet({
-        playerId: acc.playerId,
-        panelId: pId,
-        maskedName: acc.maskedName,
-        avatarSeed: acc.avatarSeed,
-        amount: debit.bet,
-        autoCashOut,
-        clientSeed,
-        ledgerKey: opKey
-      });
-
-      if (!added.ok) {
-        this.balanceManager.refundBet({
-          playerId: acc.playerId,
-          amount: debit.bet,
-          roundId: round.roundId,
-          betKey: opKey
-        });
-        return { ok: false, error: added.error, balance: this.balanceManager.getBalance(acc.playerId) };
-      }
-
-      const feed = round.getFeedRows(acc.playerId);
-      if (this.io) {
-        this.io.to(this.roomId).emit('feed:update', { roundId: round.roundId, feed });
-      }
-
-      return {
-        ok: true,
-        queued: false,
-        balance: debit.balance,
-        activeBets: round.getPlayerActiveBets(acc.playerId),
-        queuedBets: this._getQueuedForPlayer(acc.playerId),
-        feed
-      };
-    }
-
-    // Queue for next round if FLYING or CRASHED
-    this.queuedBets.set(qKey, {
-      tempKey: opKey,
-      playerId: acc.playerId,
-      panelId: pId,
-      amount: debit.bet,
-      autoCashOut: autoCashOut && Number(autoCashOut) >= 1.01 ? roundMoney(autoCashOut) : null,
-      clientSeed
-    });
-
-    return {
-      ok: true,
-      queued: true,
-      balance: debit.balance,
-      activeBets: round.getPlayerActiveBets(acc.playerId),
-      queuedBets: this._getQueuedForPlayer(acc.playerId)
-    };
+  placeBet() {
+    return { ok: false, error: 'Aviator wagering is disabled until the secure Firestore wallet migration and security tests are complete.' };
   }
 
-  cancelBet({ playerId, panelId = 1 }) {
-    const acc = this.balanceManager.ensureAccount(playerId);
-    const pId = Number(panelId) === 2 ? 2 : 1;
-    const qKey = `${acc.playerId}:${pId}`;
-
-    // 1. Cancel queued next-round bet
-    if (this.queuedBets.has(qKey)) {
-      const q = this.queuedBets.get(qKey);
-      this.queuedBets.delete(qKey);
-      const refund = this.balanceManager.refundBet({
-        playerId: acc.playerId,
-        amount: q.amount,
-        roundId: this.engine.currentRound ? this.engine.currentRound.roundId : 0,
-        betKey: q.tempKey
-      });
-      return {
-        ok: true,
-        balance: refund.balance,
-        activeBets: this.engine.currentRound ? this.engine.currentRound.getPlayerActiveBets(acc.playerId) : {},
-        queuedBets: this._getQueuedForPlayer(acc.playerId)
-      };
-    }
-
-    // 2. Cancel current WAITING bet
-    const round = this.engine.currentRound;
-    if (!round || round.phase !== PHASES.WAITING) {
-      return { ok: false, error: 'Cannot cancel bet after takeoff' };
-    }
-
-    const removed = round.removeRealBet(acc.playerId, pId);
-    if (!removed.ok) {
-      return { ok: false, error: removed.error, balance: acc.balance };
-    }
-
-    const refund = this.balanceManager.refundBet({
-      playerId: acc.playerId,
-      amount: removed.bet.bet,
-      roundId: round.roundId,
-      betKey: removed.bet.ledgerKey || removed.bet.betKey
-    });
-
-    const feed = round.getFeedRows(acc.playerId);
-    if (this.io) {
-      this.io.to(this.roomId).emit('feed:update', { roundId: round.roundId, feed });
-    }
-
-    return {
-      ok: true,
-      balance: refund.balance,
-      activeBets: round.getPlayerActiveBets(acc.playerId),
-      queuedBets: this._getQueuedForPlayer(acc.playerId),
-      feed
-    };
+  cancelBet() {
+    return { ok: false, error: 'Aviator wagering is disabled until the secure Firestore wallet migration and security tests are complete.' };
   }
 
-  cashOut({ playerId, panelId = 1 }) {
-    const uid = String(playerId || '');
-    const pId = Number(panelId) === 2 ? 2 : 1;
-    const round = this.engine.currentRound;
-    if (!round || round.phase !== PHASES.FLYING) {
-      return { ok: false, error: 'Round is not in flight' };
-    }
-
-    const bet = round.bets.get(`${round.roundId}:${uid}:${pId}`);
-    if (!bet || bet.status !== 'PLACED') {
-      return { ok: false, error: 'No active bet to cash out' };
-    }
-
-    return this._executeCashOut(bet, round.multiplier);
+  cashOut() {
+    return { ok: false, error: 'Aviator wagering is disabled until the secure Firestore wallet migration and security tests are complete.' };
   }
 
   attachSocketIO(io) {
@@ -506,13 +261,6 @@ class AviatorGameRoom {
         }
       });
 
-      socket.on('balance:topup', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
-        const res = this.balanceManager.topUp(pid, payload.amount || 100);
-        this._emitToPlayer(pid, 'player:sync', { balance: res.balance });
-        if (typeof ack === 'function') ack(res);
-      });
-
       socket.on('avatar:update', (payload = {}, ack) => {
         const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
         const acc = this.balanceManager.updateAvatar(pid, payload.avatarSeed);
@@ -541,21 +289,6 @@ class AviatorGameRoom {
         if (typeof ack === 'function') ack({ ok: true, message: msg });
       });
 
-      socket.on('chat:claim_rain', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
-        const res = this.balanceManager.claimRain(
-          pid,
-          this.activeRain.rainId,
-          this.activeRain.amount,
-          this.activeRain.maxClaims
-        );
-        if (res.ok) {
-          this.activeRain.claimedCount = res.claimedCount;
-          this.io.to(this.roomId).emit('rain:update', { ...this.activeRain });
-        }
-        if (typeof ack === 'function') ack(res);
-      });
-
       socket.on('disconnect', () => {
         this.socketPlayers.delete(socket.id);
       });
@@ -567,16 +300,13 @@ class AviatorGameRoom {
     if (this.fairnessArchive.has(id)) {
       return this.fairnessArchive.get(id);
     }
-    return {
-      ...generateRoundFairness({ roundId: id || 1022302 }),
-      crashPoint: this.previousRoundResult
-    };
+    return null;
   }
 
   getSnapshot(playerId) {
     const round = this.engine.currentRound;
     const acc = this.balanceManager.ensureAccount(playerId);
-    const feed = round ? round.getFeedRows(acc.playerId) : { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 };
+    const feed = round ? round.getFeedRows(acc.playerId) : { rows: [], totalDisplayBets: 0, activeBetsLeft: 0, totalWin: 0, cashedCount: 0 };
 
     return {
       roomId: this.roomId,
@@ -588,14 +318,14 @@ class AviatorGameRoom {
       waitTimeLeft: round ? round.getWaitTimeLeftMs() : this.engine.waitDurationMs,
       flightElapsedMs: round && round.phase === PHASES.FLYING ? Date.now() - round.flightStartedAt : 0,
       serverSeedHash: round ? round.serverSeedHash : '',
-      onlinePlayers: 1080 + this.socketPlayers.size,
+      onlinePlayers: this.socketPlayers.size,
       history: this.history,
       previousRoundResult: this.previousRoundResult,
       previousRoundRows: this.previousRoundRows,
       topWinners: this.topWinners,
       feed,
       chatMessages: this.chatMessages,
-      activeRain: this.activeRain,
+      activeRain: null,
       player: {
         playerId: acc.playerId,
         maskedName: acc.maskedName,
