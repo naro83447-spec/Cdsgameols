@@ -12,6 +12,7 @@ class AviatorGameRoom {
     this.socketPlayers = new Map(); // socketId -> playerId
     this.queuedBets = new Map();    // `${playerId}:${panelId}` -> queuedBetObj
     this._txSeq = 0;
+    this.persistenceQueue = Promise.resolve();
 
     this.history = [];
     this.previousRoundResult = null;
@@ -23,6 +24,15 @@ class AviatorGameRoom {
     this.activeRain = null;
 
     this._bindEngineEvents();
+  }
+
+  _queuePersistence(task) {
+    this.persistenceQueue = this.persistenceQueue
+      .then(task)
+      .catch((error) => {
+        console.error('[aviator-firestore]', error && error.message ? error.message : error);
+      });
+    return this.persistenceQueue;
   }
 
   _emitToPlayer(playerId, eventName, payload) {
@@ -48,6 +58,10 @@ class AviatorGameRoom {
 
   _bindEngineEvents() {
     this.engine.on('round:waiting', (data) => {
+      this._queuePersistence(() => aviatorWallet.createRound({
+        roundId: data.roundId,
+        serverSeedHash: data.serverSeedHash
+      }));
       const round = this.engine.currentRound;
       const promotedPlayers = new Set();
 
@@ -101,6 +115,7 @@ class AviatorGameRoom {
     });
 
     this.engine.on('round:takeoff', (data) => {
+      this._queuePersistence(() => aviatorWallet.startRound(data.roundId));
       if (this.io) {
         this.io.to(this.roomId).emit('round:takeoff', data);
       }
@@ -122,6 +137,11 @@ class AviatorGameRoom {
     });
 
     this.engine.on('round:crashed', (data) => {
+      this._queuePersistence(() => aviatorWallet.crashRound({
+        roundId: data.roundId,
+        crashPoint: data.crashPoint,
+        fairnessProof: data.fairnessProof
+      }));
       const round = data.round;
       this.fairnessArchive.set(data.roundId, data.fairnessProof);
 
@@ -305,9 +325,15 @@ class AviatorGameRoom {
 
   async _getAuthenticatedSnapshot(uid) {
     const snapshot = this.getSnapshot(uid);
-    const wallet = await aviatorWallet.ensureWallet(uid);
+    const [wallet, betHistory, roundHistory] = await Promise.all([
+      aviatorWallet.ensureWallet(uid),
+      aviatorWallet.getBetHistory(uid, 40),
+      aviatorWallet.getRoundHistory(42)
+    ]);
     snapshot.player.balance = wallet.balance;
-    snapshot.player.betHistory = await aviatorWallet.getBetHistory(uid, 40);
+    snapshot.player.betHistory = betHistory;
+    snapshot.history = roundHistory.map((round) => round.crashPoint);
+    snapshot.previousRoundResult = snapshot.history.length ? snapshot.history[0] : null;
     return snapshot;
   }
 
