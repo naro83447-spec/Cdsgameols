@@ -50,7 +50,8 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     }
   });
 
-  const gameRoom = new AviatorGameRoom();
+  const initialRoundId = Number(process.env.AVIATOR_INITIAL_ROUND_ID || (Date.now() + Math.floor(Math.random() * 1000)));
+  const gameRoom = new AviatorGameRoom({ initialRoundId });
   gameRoom.attachSocketIO(aviatorIo);
   gameRoom.start();
 
@@ -125,11 +126,11 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
 
   router.get('/history', requireFirebaseUser, async (req, res, next) => {
     try {
-      res.json({
-        status: 'success',
-        betHistory: await aviatorWallet.getBetHistory(req.user.uid, 50),
-        roundHistory: []
-      });
+      const [betHistory, roundHistory] = await Promise.all([
+        aviatorWallet.getBetHistory(req.user.uid, 50),
+        aviatorWallet.getRoundHistory(42)
+      ]);
+      res.json({ status: 'success', betHistory, roundHistory });
     } catch (error) { next(error); }
   });
 
@@ -140,12 +141,11 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     });
   });
 
-  router.get('/fairness/:roundId', (req, res) => {
-    const proof = gameRoom.getFairnessProof(req.params.roundId);
-    res.json({
-      status: 'success',
-      proof
-    });
+  router.get('/fairness/:roundId', async (req, res, next) => {
+    try {
+      const proof = await aviatorWallet.getRoundProof(req.params.roundId);
+      res.json({ status: 'success', proof });
+    } catch (error) { next(error); }
   });
 
   app.use('/api/aviator', router);
