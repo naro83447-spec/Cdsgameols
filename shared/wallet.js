@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_BALANCE = Number(process.env.LITEGAMES_DEFAULT_BALANCE_ETB || 1000.00);
+// Never grant a demo balance in a real wallet. Funding must come from an approved ledger transaction.
+const DEFAULT_BALANCE = 0;
 
 function roundMoney(v) {
   return Math.round((Number(v) || 0) * 100) / 100;
@@ -19,7 +20,7 @@ class UnifiedWalletStore {
   constructor() {
     this.players = new Map();
     this.transactions = [];
-    this.topWinners = [
+    this.topWinners = [];\n    /* Demo winner fixtures removed; show only verified game results.\n    this.topWinners = [
       {
         id: 'seed_w1',
         game: 'Multi Hot 5',
