@@ -137,11 +137,22 @@ class AviatorGameRoom {
     });
 
     this.engine.on('round:crashed', (data) => {
-      this._queuePersistence(() => aviatorWallet.crashRound({
-        roundId: data.roundId,
-        crashPoint: data.crashPoint,
-        fairnessProof: data.fairnessProof
-      }));
+      this._queuePersistence(async () => {
+        await aviatorWallet.crashRound({
+          roundId: data.roundId,
+          crashPoint: data.crashPoint,
+          fairnessProof: data.fairnessProof
+        });
+        const persisted = await aviatorWallet.getRoundHistory(42);
+        this.history = persisted.map((item) => item.crashPoint);
+        this.previousRoundResult = this.history.length ? this.history[0] : null;
+        if (this.io) {
+          this.io.to(this.roomId).emit('history:update', {
+            history: this.history,
+            previousRoundResult: this.previousRoundResult
+          });
+        }
+      });
       const round = data.round;
       this.fairnessArchive.set(data.roundId, data.fairnessProof);
 
