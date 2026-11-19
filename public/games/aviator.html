@@ -1,49 +1,31 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-<!-- LITEGAMES_PLAYER_SYNC -->
+<!-- LITEGAMES_IFRAME_SYNC -->
 <script>
 (function() {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    var pid = params.get('playerId') || localStorage.getItem('litegames_player_id');
-    if (pid) {
-      ['litegames_player_id','aviator_player_id','shamo_keno_player_id','shamo_rocket_player_id','mh5_player_id','jetx_player_id','dragons_player_id'].forEach(function(k) {
-        localStorage.setItem(k, pid);
+  if (window.parent && window.parent !== window) {
+    var originalFetch = window.fetch;
+    window.fetch = function() {
+      var requestUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
+      return originalFetch.apply(this, arguments).then(function(response) {
+        if (requestUrl.indexOf('/api/') !== -1) {
+          setTimeout(function() {
+            window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, window.location.origin);
+          }, 120);
+        }
+        return response;
       });
-    }
-    var pname = params.get('displayName') || localStorage.getItem('litegames_player_name');
-    if (pname) {
-      ['litegames_player_name','shamo_keno_name','shamo_rocket_name','jetx_display_name'].forEach(function(k) {
-        localStorage.setItem(k, pname);
-      });
-    }
-    if (window.parent && window.parent !== window) {
-      var origFetch = window.fetch;
-      window.fetch = function() {
-        var reqUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
-        return origFetch.apply(this, arguments).then(function(res) {
-          try {
-            var u = reqUrl;
-            if (u.indexOf('/api/') !== -1) {
-              setTimeout(function() {
-                window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, '*');
-              }, 120);
-            }
-          } catch(_) {}
-          return res;
-        });
-      };
-    } else {
-      window.addEventListener('DOMContentLoaded', function() {
-        var btn = document.createElement('a');
-        btn.href = '/';
-        btn.innerHTML = '&#8592; Lite Games';
-        btn.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
-        document.body.appendChild(btn);
-      });
-    }
-  } catch (e) {}
+    };
+  } else {
+    window.addEventListener('DOMContentLoaded', function() {
+      var back = document.createElement('a');
+      back.href = '/';
+      back.textContent = '← Lite Games';
+      back.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
+      document.body.appendChild(back);
+    });
+  }
 })();
 </script>
 
@@ -164,6 +146,12 @@
   </style>
 </head>
 <body class="bg-[#0e0f11] text-white flex justify-center min-h-screen">
+  <div class="mx-auto max-w-3xl px-3 pt-3">
+    <div class="rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-center text-xs text-amber-200">
+      Aviator is temporarily unavailable. Firebase sign-in and Firestore wallet settlement must be completed and tested before wagering is enabled. Demo top-ups have been removed.
+    </div>
+  </div>
+
 
   <div id="app" class="w-full max-w-[480px] bg-[#0e0f11] flex flex-col min-h-screen relative shadow-2xl border-x border-[#1c1d20]">
 
@@ -174,8 +162,8 @@
       </div>
 
       <div class="flex items-center gap-2.5">
-        <button id="balanceBtn" onclick="openTopUpModal()" title="Tap to add demo ETB" class="flex items-center gap-1 bg-[#1b1c1f] hover:bg-[#232529] px-2.5 py-1 rounded-full border border-[#2a2b30] transition">
-          <span id="balanceDisplay" class="text-[#38d354] font-bold text-[14px] tracking-tight">1,000.00</span>
+        <button id="balanceBtn" onclick="openTopUpModal()" title="Wallet balance" class="flex items-center gap-1 bg-[#1b1c1f] hover:bg-[#232529] px-2.5 py-1 rounded-full border border-[#2a2b30] transition">
+          <span id="balanceDisplay" class="text-[#38d354] font-bold text-[14px] tracking-tight">0.00</span>
           <span class="text-[#8e9096] text-[12px] font-medium">ETB</span>
         </button>
 
@@ -258,7 +246,7 @@
         <div id="crashedOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-black/25">
           <div class="text-[17px] font-bold tracking-wider text-white uppercase mb-1 drop-shadow">FLEW AWAY!</div>
           <div id="crashedMultiplierText" class="text-[48px] sm:text-[54px] font-extrabold text-[#e50914] tracking-tight leading-none drop-shadow-[0_2px_16px_rgba(229,9,20,0.5)]">
-            1.77x
+            —
           </div>
         </div>
 
@@ -268,7 +256,7 @@
             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Milo" alt="" class="w-5 h-5 rounded-full border border-[#141518] bg-[#2a2b30]" />
           </div>
-          <span id="activeFlightCount" class="text-[11px] font-bold text-white">435</span>
+          <span id="activeFlightCount" class="text-[11px] font-bold text-white">0</span>
         </div>
       </div>
     </div>
@@ -414,7 +402,7 @@
                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P2" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=P3" alt="" class="w-4 h-4 rounded-full border border-[#1b1c1d]" />
                 </div>
-                <span id="allBetsCounter" class="text-[12px] font-bold text-white">435/435 <span class="text-[#8e9096] font-normal">Bets</span></span>
+                <span id="allBetsCounter" class="text-[12px] font-bold text-white">0/0 <span class="text-[#8e9096] font-normal">Bets</span></span>
               </div>
               <div class="w-36 h-1 bg-[#28292e] rounded-full overflow-hidden">
                 <div id="allBetsProgress" class="h-full bg-[#38d354] transition-all duration-200" style="width: 100%;"></div>
@@ -441,7 +429,7 @@
         <div id="contentPrevious" class="hidden flex-col flex-1">
           <div class="mx-3 my-2 py-2.5 bg-[#141517] rounded-xl border border-[#25262a] flex flex-col items-center">
             <span class="text-[11px] text-[#8e9096] mb-0.5">Round Result</span>
-            <span id="prevRoundResultText" class="text-[26px] font-extrabold mult-blue leading-none">1.77x</span>
+            <span id="prevRoundResultText" class="text-[26px] font-extrabold mult-blue leading-none">—</span>
           </div>
           <div class="px-3 py-1 grid grid-cols-12 text-[11px] text-[#7c7e85] font-medium">
             <div class="col-span-5">Player</div>
@@ -515,7 +503,7 @@
         <div class="h-2 bg-[#141517]"></div>
 
         <div class="divide-y divide-[#2a2b30] text-[#d0d2d6]">
-          <button onclick="openSimpleInfoModal('Free Bets', 'No active Free Bets right now. Watch the Live Chat for Admin Rain drops of 20.00 ETB!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>⭐</span><span>Free Bets</span></button>
+          <button onclick="openSimpleInfoModal('Bonuses', 'No active bonus is available. Deposits and wallet credits are controlled by the secure admin approval process.')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>⭐</span><span>Free Bets</span></button>
           <button onclick="openMyBetHistoryModal()" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>🕒</span><span>My Bet History</span></button>
           <button onclick="openSimpleInfoModal('Game Limits', 'Minimum Bet: 1.00 ETB • Maximum Bet: 10,000.00 ETB • Maximum Win per Bet: 500,000.00 ETB')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>💵</span><span>Game Limits</span></button>
           <button onclick="openSimpleInfoModal('How To Play', '1. Place one or two bets before takeoff.\n2. Watch the lucky plane fly and the multiplier grow.\n3. Press Cash Out before the plane flies away to multiply your bet!')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#26272b] text-left"><span>❓</span><span>How To Play</span></button>
@@ -535,41 +523,12 @@
         <div class="h-12 px-3 bg-[#1b1c1f] border-b border-[#2a2b30] flex items-center justify-between">
           <button onclick="toggleChatDrawer()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-white">‹</button>
           <div class="text-[13px] font-semibold text-[#b0b2b8]">
-            Online: <span id="onlinePlayersCount" class="text-[#38d354] font-bold">1080</span>
+            Online: <span id="onlinePlayersCount" class="text-[#38d354] font-bold">0</span>
           </div>
           <button onclick="toggleChatRulesModal()" class="w-8 h-8 rounded-full bg-[#26272b] flex items-center justify-center text-[#b0b2b8] hover:text-white font-serif italic font-bold">i</button>
         </div>
 
         <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
-          <div class="bg-[#23471e] border border-[#3a7531] rounded-2xl p-3 shadow-lg">
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-[#1d63b8] flex items-center justify-center font-bold text-xs">B</div>
-                <span class="text-[#f59e0b] font-bold text-xs">Admin</span>
-                <span class="bg-[#e50914] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Admin</span>
-                <span class="text-[10px] text-[#a3c29e]">19:19</span>
-              </div>
-              <div class="flex items-center gap-1 text-[#d4f7cf] font-bold text-xs">
-                <span>🪙</span>
-                <span>20.00 ETB</span>
-              </div>
-            </div>
-
-            <div class="bg-[#183314] rounded-xl p-2.5 border border-[#2c5925]">
-              <div class="flex items-center justify-between text-xs mb-2">
-                <div class="flex items-center gap-1.5 text-[#a3c29e] font-semibold">
-                  <span>🌧️</span><span>Rain</span>
-                </div>
-                <span id="rainQuantityText" class="text-[#a3c29e]">Quantity: <strong class="text-white">3 / 25</strong></span>
-              </div>
-              <button id="claimRainBtn" onclick="claimRainBonus()" class="w-full py-2 rounded-full bg-[#38d354] hover:bg-[#2eb846] text-black font-extrabold text-xs transition shadow">
-                Claim 20.00 ETB Free Bet
-              </button>
-            </div>
-            <div class="text-center text-[11px] text-[#c7ebc3] mt-2 font-medium">
-              Total: <strong class="text-white">500.00 ETB</strong>
-            </div>
-          </div>
           <div id="chatDynamicMessages" class="flex flex-col gap-2.5"></div>
         </div>
 
@@ -1174,32 +1133,18 @@
     // 2. IDENTITY & SHARED STATE
     // ==========================================
     function resolvePlayerIdentity() {
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgUser && tgUser.id) {
-        return {
-          playerId: String(tgUser.id),
-          displayName: tgUser.first_name || tgUser.username || `u_${tgUser.id}`,
-          avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
-        };
-      }
-      let storedId = localStorage.getItem('aviator_player_id');
-      if (!storedId) {
-        storedId = 'p_' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem('aviator_player_id', storedId);
-      }
       return {
-        playerId: storedId,
-        displayName: 'd***u',
+        playerId: '',
+        displayName: 'Guest',
         avatarSeed: localStorage.getItem('aviator_avatar_seed') || 'MercedesGold'
       };
     }
-
     const identity = resolvePlayerIdentity();
 
     const STATE = {
-      balance: 1000.00,
+      balance: 0,
       phase: 'WAITING',
-      roundNumber: 1022303,
+      roundNumber: 0,
       multiplier: 1.00,
       waitTimeTotal: 5000,
       waitTimeLeft: 5000,
@@ -1211,8 +1156,8 @@
       topFilterType: 'x',
       topFilterPeriod: 'day',
       rainClaimed: false,
-      rainCount: 3,
-      rainMax: 25,
+      rainCount: 0,
+      rainMax: 0,
       history: [],
       myBetHistory: [],
       lastFairnessProof: null,
@@ -1220,9 +1165,9 @@
         1: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false },
         2: { amount: 4.00, status: 'IDLE', queuedNext: false, autoBet: false }
       },
-      feed: { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 },
+      feed: { rows: [], totalDisplayBets: 0, activeBetsLeft: 0, totalWin: 0 },
       previousRoundRows: [],
-      previousRoundResult: 1.77,
+      previousRoundResult: null,
       topWinners: []
     };
 
@@ -1405,7 +1350,7 @@
       // 1. Place bet or queue for next round
       if (p.status === 'IDLE' && !p.queuedNext) {
         if (!socket || !socket.connected) {
-          showToast('Connecting to Aviator server...');
+          showToast('Aviator is disabled until Firebase sign-in and secure Firestore wallet settlement are ready.');
           return;
         }
         socket.emit('bet:place', {
@@ -1509,12 +1454,12 @@
     // 5. LIVE FEED, PREVIOUS & TOP LEADERBOARD
     // ==========================================
     function renderLiveBetsList() {
-      const feed = STATE.feed || { rows: [], totalDisplayBets: 435, activeBetsLeft: 435, totalWin: 0 };
-      const totalDisplayBets = feed.totalDisplayBets || 435;
+      const feed = STATE.feed || { rows: [], totalDisplayBets: 0, activeBetsLeft: 0, totalWin: 0 };
+      const totalDisplayBets = Number(feed.totalDisplayBets || 0);
       const activeBetsLeft = feed.activeBetsLeft ?? totalDisplayBets;
 
       document.getElementById('allBetsCounter').innerHTML = `${activeBetsLeft}/${totalDisplayBets} <span class="text-[#8e9096] font-normal">Bets</span>`;
-      document.getElementById('allBetsProgress').style.width = `${(activeBetsLeft / totalDisplayBets) * 100}%`;
+      document.getElementById('allBetsProgress').style.width = `${totalDisplayBets > 0 ? (activeBetsLeft / totalDisplayBets) * 100 : 0}%`;
       document.getElementById('activeFlightCount').textContent = activeBetsLeft;
       document.getElementById('totalWinEtb').textContent = Number(feed.totalWin || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1976,26 +1921,6 @@
       });
     }
 
-    function claimRainBonus() {
-      if (STATE.rainClaimed || !socket) return;
-      socket.emit('chat:claim_rain', { playerId: identity.playerId }, (res) => {
-        if (!res || !res.ok) {
-          showToast(res?.error || 'Could not claim Rain bonus');
-          return;
-        }
-        STATE.rainClaimed = true;
-        STATE.rainCount = res.claimedCount;
-        STATE.balance = res.balance;
-        updateBalanceUI();
-        audio.playRain();
-
-        document.getElementById('rainQuantityText').innerHTML = `Quantity: <strong class="text-white">${res.claimedCount} / ${res.maxClaims}</strong>`;
-        const btn = document.getElementById('claimRainBtn');
-        btn.textContent = '✓ Claimed 20.00 ETB';
-        btn.className = 'w-full py-2 rounded-full bg-[#2b4c26] text-[#9ec499] font-bold text-xs cursor-default';
-        showToast('+20.00 ETB Rain Bonus Added!');
-      });
-    }
 
     function renderFairnessModal(proof) {
       if (!proof) return;
@@ -2044,32 +1969,10 @@
     }
 
     function openTopUpModal() {
-      document.getElementById('genericModalTitle').textContent = 'Demo Balance Top-Up';
-      document.getElementById('genericModalBody').innerHTML = `
-        <div class="flex flex-col gap-3">
-          <p class="text-[#b0b2b8]">Current Balance: <strong class="text-[#38d354]">${STATE.balance.toFixed(2)} ETB</strong></p>
-          <div class="grid grid-cols-3 gap-2">
-            <button onclick="addDemoFunds(100)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+100 ETB</button>
-            <button onclick="addDemoFunds(500)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+500 ETB</button>
-            <button onclick="addDemoFunds(2000)" class="py-2 rounded-xl bg-[#28a745] hover:bg-[#218838] text-white font-bold">+2000 ETB</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('genericModal').classList.remove('hidden');
-    }
-
-    function addDemoFunds(amt) {
-      if (socket && socket.connected) {
-        socket.emit('balance:topup', { playerId: identity.playerId, amount: amt }, (res) => {
-          if (res && typeof res.balance === 'number') {
-            STATE.balance = res.balance;
-            updateBalanceUI();
-            audio.playCashOut();
-            closeGenericModal();
-            showToast(`Added ${amt.toFixed(2)} ETB to demo wallet`);
-          }
-        });
-      }
+      openSimpleInfoModal(
+        'Wallet unavailable',
+        'Demo top-ups have been removed. Real deposits will be available only after Firebase sign-in and admin-approved Telebirr funding are connected.'
+      );
     }
 
     function openMyBetHistoryModal() {
@@ -2100,8 +2003,14 @@
     // ==========================================
     // 8. SOCKET.IO CONNECTION & EVENT HANDLERS
     // ==========================================
-    const socket = typeof io === 'function'
-      ? io({ auth: { playerId: identity.playerId, displayName: identity.displayName, avatarSeed: identity.avatarSeed } })
+    // The host auth layer may inject a short-lived Firebase ID token in memory.
+    // Never use localStorage IDs, Telegram initDataUnsafe, or caller-supplied player IDs as auth.
+    let firebaseIdToken = String(window.liteGamesFirebaseIdToken || '');
+    if (!firebaseIdToken && window.parent && window.parent !== window) {
+      try { firebaseIdToken = String(window.parent.liteGamesFirebaseIdToken || ''); } catch (_) {}
+    }
+    const socket = typeof io === 'function' && firebaseIdToken
+      ? io('/aviator', { auth: { idToken: firebaseIdToken } })
       : null;
 
     if (socket) {
@@ -2207,6 +2116,16 @@
         if (data.feed) {
           STATE.feed = data.feed;
           renderLiveBetsList();
+        }
+      });
+
+      socket.on('history:update', (data) => {
+        if (Array.isArray(data.history)) {
+          STATE.history = data.history;
+          renderHistoryRibbon();
+        }
+        if (typeof data.previousRoundResult === 'number') {
+          STATE.previousRoundResult = data.previousRoundResult;
         }
       });
 

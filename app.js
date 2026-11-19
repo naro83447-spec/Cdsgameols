@@ -4,7 +4,7 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 
-const { attachWalletRoutes } = require('./shared/wallet-routes');
+const { attachSecureWalletRoutes } = require('./shared/secure-wallet-routes');
 const { createAviatorApp } = require('./aviator-backend/app');
 const { createJetXApp } = require('./jetx-backend/app');
 const { createDragonsApp } = require('./dragons-backend/app');
@@ -16,13 +16,14 @@ function startPlatformServer(port = Number(process.env.PORT || 3000)) {
   const app = express();
   const httpServer = http.createServer(app);
 
-  app.use(cors());
+  const allowedOrigins = String(process.env.CORS_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean);
+  app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : false }));
   app.use(express.json({ limit: '2mb' }));
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'lite-games-platform' }));
 
-  // 1. Unified Platform Wallet & Leaderboard API (/api/wallet/*)
-  attachWalletRoutes(app);
+  // Server-authenticated Firestore wallet. Telebirr deposits remain pending until admin approval.
+  attachSecureWalletRoutes(app);
 
   // 2. Mount all 6 Game Backends sharing the same Socket.IO server & Unified Wallet
   const { io } = createAviatorApp({

@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node app.js",
-    "start:bot": "node bot.js"
+    "start:bot": "node bot.js",
+    "test:aviator:safety": "node --test aviator-backend/aviator-safety.test.js"
   },
   "engines": {
     "node": ">=18.0.0"

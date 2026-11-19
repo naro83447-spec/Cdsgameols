@@ -1,5 +1,5 @@
-const { sharedWallet, DEFAULT_BALANCE: UNIFIED_DEFAULT_BALANCE } = require('../shared/wallet');
-const DEFAULT_BALANCE = Number(process.env.AVIATOR_DEFAULT_BALANCE_ETB || UNIFIED_DEFAULT_BALANCE || 1000.00);
+const { sharedWallet } = require('../shared/wallet');
+const DEFAULT_BALANCE = 0;
 const MIN_BET = Math.max(1, Number(process.env.AVIATOR_MIN_BET_ETB || 1));
 const MAX_BET = Math.max(MIN_BET, Number(process.env.AVIATOR_MAX_BET_ETB || 10000));
 
@@ -195,41 +195,6 @@ class AviatorBalanceManager {
     });
     if (acc.betHistory.length > 100) acc.betHistory.length = 100;
     this.processedOps.add(opId);
-  }
-
-  topUp(playerId, amount = 100) {
-    const acc = this.ensureAccount(playerId);
-    const credit = roundMoney(Math.min(50000, Math.max(1, Number(amount) || 100)));
-    acc.balance = roundMoney(acc.balance + credit);
-    acc.updatedAt = Date.now();
-    return { ok: true, balance: acc.balance, added: credit };
-  }
-
-  claimRain(playerId, rainId, amount = 20, maxClaims = 25) {
-    const acc = this.ensureAccount(playerId);
-    if (!this.rainClaims.has(rainId)) {
-      this.rainClaims.set(rainId, new Set(['seed_a', 'seed_b', 'seed_c']));
-    }
-    const claimedSet = this.rainClaims.get(rainId);
-    if (claimedSet.has(acc.playerId)) {
-      return { ok: false, error: 'You already claimed this Rain bonus!', balance: acc.balance, claimedCount: claimedSet.size, maxClaims };
-    }
-    if (claimedSet.size >= maxClaims) {
-      return { ok: false, error: 'Rain bonus is fully claimed!', balance: acc.balance, claimedCount: claimedSet.size, maxClaims };
-    }
-
-    claimedSet.add(acc.playerId);
-    const bonus = roundMoney(amount);
-    acc.balance = roundMoney(acc.balance + bonus);
-    acc.updatedAt = Date.now();
-
-    return {
-      ok: true,
-      balance: acc.balance,
-      added: bonus,
-      claimedCount: claimedSet.size,
-      maxClaims
-    };
   }
 
   getBetHistory(playerId, limit = 50) {

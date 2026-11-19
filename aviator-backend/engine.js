@@ -1,6 +1,5 @@
 const EventEmitter = require('events');
 const { generateRoundFairness } = require('./fairness');
-const { roundMoney } = require('./balance');
 const { PHASES, AviatorRound } = require('./round');
 
 class AviatorEngine extends EventEmitter {
@@ -113,17 +112,6 @@ class AviatorEngine extends EventEmitter {
         }
       }
 
-      // 2. Trigger simulated bots cashing out
-      let botsChanged = false;
-      for (const bot of round.botBets) {
-        if (!bot.cashedOut && computed >= bot.targetCashout && bot.targetCashout < round.crashPoint) {
-          bot.cashedOut = true;
-          bot.cashMult = bot.targetCashout;
-          bot.winAmount = roundMoney(bot.bet * bot.targetCashout);
-          botsChanged = true;
-        }
-      }
-
       // 3. Check crash condition
       if (computed >= round.crashPoint) {
         this._crashRound(now);
@@ -136,7 +124,6 @@ class AviatorEngine extends EventEmitter {
         phase: round.phase,
         multiplier: round.multiplier,
         elapsedMs: now - round.flightStartedAt,
-        botsChanged
       });
       return;
     }

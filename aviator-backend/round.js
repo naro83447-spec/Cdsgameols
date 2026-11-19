@@ -8,11 +8,7 @@ const PHASES = {
   CRASHED: 'CRASHED'
 };
 
-const BOT_NAMES = [
-  'w***d', 'j***r', 'k***f', 'v***w', 'e***v', 'r***n', 'j***p', 'z***b',
-  'd***e', 'p***e', 'b***l', 'l***f', 'k***g', 'a***j', 'y***h', 'g***p',
-  'c***j', 'x***j', 'm***k', 's***t', 'n***a', 'f***m', 'o***k', 'e***a'
-];
+
 
 class AviatorRound {
   constructor(roundId, config = {}) {
@@ -35,36 +31,8 @@ class AviatorRound {
     this.fairnessProof = null;
 
     this.bets = new Map(); // betKey -> betObj
-    this.botBets = this._createSimulatedBets();
-    this.basePlayersCount = 435;
-  }
-
-  _createSimulatedBets() {
-    const count = 24;
-    const list = [];
-    const stakes = [4, 10, 20, 50, 100, 250, 300, 464, 700, 1004, 1476, 2504];
-    for (let i = 0; i < count; i++) {
-      const name = BOT_NAMES[i % BOT_NAMES.length];
-      const bet = stakes[Math.floor(Math.random() * stakes.length)];
-      const targetCashout = Math.random() < 0.72
-        ? roundMoney(1.12 + Math.random() * 4.5)
-        : 9999;
-
-      list.push({
-        betKey: `bot_${this.roundId}_${i}`,
-        name,
-        avatarSeed: `${name}${i}`,
-        bet,
-        targetCashout,
-        cashedOut: false,
-        cashMult: null,
-        winAmount: 0,
-        isMe: false,
-        isBot: true
-      });
-    }
-    list.sort((a, b) => b.bet - a.bet);
-    return list;
+    this.botBets = [];
+    this.basePlayersCount = 0;
   }
 
   getWaitTimeLeftMs(now = Date.now()) {
@@ -134,7 +102,7 @@ class AviatorRound {
   }
 
   getFeedRows(requestingPlayerId = '') {
-    const realRows = Array.from(this.bets.values()).map((b) => ({
+    const rows = Array.from(this.bets.values()).map((b) => ({
       betKey: b.betKey,
       name: b.playerId === String(requestingPlayerId) ? `${b.name} (You)` : b.name,
       playerId: b.playerId,
@@ -147,45 +115,13 @@ class AviatorRound {
       isMe: b.playerId === String(requestingPlayerId),
       isBot: false
     }));
-
-    const botRows = this.botBets.map((b) => ({
-      betKey: b.betKey,
-      name: b.name,
-      avatarSeed: b.avatarSeed,
-      bet: b.bet,
-      cashedOut: b.cashedOut,
-      cashMult: b.cashMult,
-      winAmount: b.winAmount,
-      isMe: false,
-      isBot: true
-    }));
-
-    const combined = [...realRows, ...botRows];
-    let totalWin = 0;
-    let cashedCount = 0;
-    for (const row of combined) {
-      if (row.cashedOut) {
-        totalWin = roundMoney(totalWin + row.winAmount);
-        cashedCount += 1;
-      }
-    }
-
-    const totalDisplayBets = this.basePlayersCount + realRows.length;
-    const botCashedRatio = this.botBets.length > 0
-      ? this.botBets.filter((b) => b.cashedOut).length / this.botBets.length
-      : 0;
-    const realCashed = realRows.filter((b) => b.cashedOut).length;
-    const activeBetsLeft = Math.max(
-      0,
-      totalDisplayBets - Math.round(botCashedRatio * this.basePlayersCount) - realCashed
-    );
-
+    const totalWin = rows.reduce((sum, row) => sum + (row.cashedOut ? row.winAmount : 0), 0);
     return {
-      rows: combined,
-      totalDisplayBets,
-      activeBetsLeft,
-      totalWin,
-      cashedCount
+      rows,
+      totalDisplayBets: rows.length,
+      activeBetsLeft: rows.filter((row) => !row.cashedOut).length,
+      totalWin: roundMoney(totalWin),
+      cashedCount: rows.filter((row) => row.cashedOut).length
     };
   }
 

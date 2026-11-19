@@ -31,7 +31,7 @@ function generateRoundFairness({ roundId, serverSeed, clientSeeds = [] }) {
         seed: String(clientSeeds[i].seed)
       });
     } else {
-      const names = ['k***w', 'l***w', 'm***w'];
+      const names = ['No bettor', 'No bettor', 'No bettor'];
       seeds.push({
         player: names[i],
         seed: generateRandomSeed(10)
