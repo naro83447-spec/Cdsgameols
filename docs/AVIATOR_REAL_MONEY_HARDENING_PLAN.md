@@ -1,6 +1,6 @@
 # Aviator real-money hardening plan
 
-Status: requirements and implementation plan only. This document does not enable real-money wagering and does not mean the game is production-ready.
+Status: partial hardening committed. Legacy Aviator wagering is intentionally disabled. Firestore bet settlement, authenticated sockets, and persistent round history are not implemented; this is not production-ready.
 
 ## Required player-funds rules
 - Remove all demo/default balances and user-triggered demo top-ups.
@@ -29,11 +29,11 @@ Status: requirements and implementation plan only. This document does not enable
 - Verify Telegram Mini App initData server-side before linking Telegram identity to a Firebase UID.
 
 ## Delivery sequence
-1. Remove Aviator demo balances, public top-ups, fake room activity, fake winners and fake rewards.
-2. Replace in-memory Aviator balance operations with the secure Firestore wallet service.
-3. Implement authenticated bet debit, waiting-round cancellation/refund, cash-out credit and crash loss settlement with atomic transactions and idempotency.
-4. Persist round, bet and settlement history; verify fairness proofs.
-5. Add tests for zero-balance accounts, pending/unapproved deposits, insufficient funds, unauthorized HTTP/socket requests, duplicate requests, cancellation, cash-out, crash settlement and concurrent requests.
+1. [PARTIAL] Set new in-memory wallets to zero, block legacy Aviator wager/top-up paths, and remove simulated bets, seeded winners, fabricated counts, fake rain/chat and unpersisted history.
+2. [NOT DONE] Replace in-memory Aviator balance operations with the secure Firestore wallet service.
+3. [NOT DONE] Implement authenticated bet debit, waiting-round cancellation/refund, cash-out credit and crash loss settlement with atomic transactions and idempotency.
+4. [NOT DONE] Persist round, bet and settlement history; verify fairness proofs.
+5. Add and run tests for zero-balance accounts, pending/unapproved deposits, insufficient funds, unauthorized HTTP/socket requests, duplicate requests, cancellation, cash-out, crash settlement and concurrent requests.
 6. Review Firestore security rules and admin approval controls.
 7. Only after independent security and compliance review, consider enabling real-money play.
 
@@ -42,3 +42,6 @@ Do not enable live deposits or real-money wagering until all authentication, wal
 
 ## Scope note
 This plan applies to Aviator first. The other five games must be migrated separately after Aviator has been fully tested. Do not remove or overwrite unrelated game code as part of this task.
+
+## Current implementation note
+The initial hardening commit series removes the legacy demo top-up and simulated Aviator room activity and makes all Aviator bet/cancel/cash-out methods fail closed. It does not yet connect Aviator to Firestore. Do not re-enable wagering by changing a flag; the server-side Firestore wallet and settlement implementation, authentication, persistence and tests must be completed first.
