@@ -6,6 +6,8 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 
 const { AviatorGameRoom } = require('./gameroom');
+const { requireFirebaseUser, getAuth } = require('../shared/firebase-admin');
+const aviatorWallet = require('./firestore-wallet');
 
 function resolveHtmlPath() {
   const candidates = [
@@ -34,8 +36,22 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     cors: { origin: '*', methods: ['GET', 'POST'] }
   });
 
+  // Aviator gets its own namespace so its Firebase auth requirement does not break other games.
+  const aviatorIo = io.of('/aviator');
+  aviatorIo.use(async (socket, next) => {
+    try {
+      const token = String(socket.handshake.auth && socket.handshake.auth.idToken || '');
+      if (!token) return next(new Error('Firebase sign-in required.'));
+      const decoded = await getAuth().verifyIdToken(token, true);
+      socket.data.uid = decoded.uid;
+      return next();
+    } catch (_error) {
+      return next(new Error('Invalid or expired Firebase sign-in.'));
+    }
+  });
+
   const gameRoom = new AviatorGameRoom();
-  gameRoom.attachSocketIO(io);
+  gameRoom.attachSocketIO(aviatorIo);
   gameRoom.start();
 
   const router = express.Router();
@@ -56,16 +72,17 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
       roundId: round ? round.roundId : null,
       phase: round ? round.phase : null,
       multiplier: round ? round.multiplier : 1.00,
-      connectedSockets: io.engine ? io.engine.clientsCount : 0
+      connectedSockets: aviatorIo.sockets.size
     });
   });
 
-  router.get('/state', (req, res) => {
-    const playerId = String(req.query.playerId || req.get('X-Player-Id') || 'p_guest');
-    res.json({
-      status: 'success',
-      ...gameRoom.getSnapshot(playerId)
-    });
+  router.get('/state', requireFirebaseUser, async (req, res, next) => {
+    try {
+      const snapshot = gameRoom.getSnapshot(req.user.uid);
+      const wallet = await aviatorWallet.ensureWallet(req.user.uid);
+      snapshot.player.balance = wallet.balance;
+      res.json({ status: 'success', ...snapshot });
+    } catch (error) { next(error); }
   });
 
   router.post('/bet', (req, res) => {
@@ -106,13 +123,14 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     res.json({ status: 'success', ...result });
   });
 
-  router.get('/history', (req, res) => {
-    const uid = String(req.query.playerId || req.get('X-Player-Id') || 'p_guest');
-    res.json({
-      status: 'success',
-      betHistory: gameRoom.balanceManager.getBetHistory(uid, 50),
-      roundHistory: gameRoom.history
-    });
+  router.get('/history', requireFirebaseUser, async (req, res, next) => {
+    try {
+      res.json({
+        status: 'success',
+        betHistory: await aviatorWallet.getBetHistory(req.user.uid, 50),
+        roundHistory: []
+      });
+    } catch (error) { next(error); }
   });
 
   router.get('/top', (_req, res) => {
@@ -142,15 +160,15 @@ function createAviatorApp({ app: existingApp, httpServer: existingHttpServer, io
     }
   }
 
-  return { app, httpServer, io, gameRoom };
+  return { app, httpServer, io, aviatorIo, gameRoom };
 }
 
 function startServer(port = process.env.PORT || 3000) {
-  const { app, httpServer, io, gameRoom } = createAviatorApp({ serveStaticHtml: true });
+  const { app, httpServer, io, aviatorIo, gameRoom } = createAviatorApp({ serveStaticHtml: true });
   httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Aviator Game Server running on port ${port}`);
   });
-  return { app, httpServer, io, gameRoom };
+  return { app, httpServer, io, aviatorIo, gameRoom };
 }
 
 if (require.main === module) {
