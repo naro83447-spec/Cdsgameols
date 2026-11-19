@@ -1,5 +1,6 @@
 const { AviatorBalanceManager } = require('./balance');
 const { AviatorEngine, PHASES } = require('./engine');
+const aviatorWallet = require('./firestore-wallet');
 
 class AviatorGameRoom {
   constructor(options = {}) {
@@ -190,8 +191,8 @@ class AviatorGameRoom {
     io.on('connection', (socket) => {
       socket.join(this.roomId);
 
-      const authPlayerId = socket.handshake.auth?.playerId || socket.handshake.query?.playerId;
-      const boundId = String(authPlayerId || `p_${socket.id.slice(0, 8)}`);
+      const boundId = String(socket.data.uid || '');
+      if (!boundId) return socket.disconnect(true);
 
       this.balanceManager.ensureAccount(boundId, {
         displayName: socket.handshake.auth?.displayName || 'd***u',
@@ -199,29 +200,31 @@ class AviatorGameRoom {
       });
       this.socketPlayers.set(socket.id, boundId);
 
-      socket.emit('room:state', this.getSnapshot(boundId));
+      this._getAuthenticatedSnapshot(boundId).then((snap) => socket.emit('room:state', snap)).catch(() => socket.disconnect(true));
 
       socket.on('player:identify', (payload = {}, ack) => {
-        const nextId = String(payload.playerId || boundId).trim() || boundId;
+        const nextId = boundId;
         this.balanceManager.ensureAccount(nextId, {
           displayName: payload.displayName || 'd***u',
           avatarSeed: payload.avatarSeed || ''
         });
         this.socketPlayers.set(socket.id, nextId);
-        const snap = this.getSnapshot(nextId);
-        socket.emit('room:state', snap);
-        if (typeof ack === 'function') ack({ ok: true, state: snap });
+        this._getAuthenticatedSnapshot(nextId).then((snap) => {
+          socket.emit('room:state', snap);
+          if (typeof ack === 'function') ack({ ok: true, state: snap });
+        }).catch(() => { if (typeof ack === 'function') ack({ ok: false, error: 'Wallet unavailable.' }); });
       });
 
       socket.on('room:sync', (_, ack) => {
-        const pid = this.socketPlayers.get(socket.id) || boundId;
-        const snap = this.getSnapshot(pid);
-        socket.emit('room:state', snap);
-        if (typeof ack === 'function') ack({ ok: true, state: snap });
+        const pid = boundId;
+        this._getAuthenticatedSnapshot(pid).then((snap) => {
+          socket.emit('room:state', snap);
+          if (typeof ack === 'function') ack({ ok: true, state: snap });
+        }).catch(() => { if (typeof ack === 'function') ack({ ok: false, error: 'Wallet unavailable.' }); });
       });
 
       socket.on('bet:place', (payload = {}, ack) => {
-        const pid = String(payload.playerId || this.socketPlayers.get(socket.id) || boundId);
+        const pid = boundId;
         this.socketPlayers.set(socket.id, pid);
         const res = this.placeBet({
           playerId: pid,
@@ -298,6 +301,14 @@ class AviatorGameRoom {
       return this.fairnessArchive.get(id);
     }
     return null;
+  }
+
+  async _getAuthenticatedSnapshot(uid) {
+    const snapshot = this.getSnapshot(uid);
+    const wallet = await aviatorWallet.ensureWallet(uid);
+    snapshot.player.balance = wallet.balance;
+    snapshot.player.betHistory = await aviatorWallet.getBetHistory(uid, 40);
+    return snapshot;
   }
 
   getSnapshot(playerId) {
