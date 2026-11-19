@@ -1,49 +1,31 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-<!-- LITEGAMES_PLAYER_SYNC -->
+<!-- LITEGAMES_IFRAME_SYNC -->
 <script>
 (function() {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    var pid = params.get('playerId') || localStorage.getItem('litegames_player_id');
-    if (pid) {
-      ['litegames_player_id','aviator_player_id','shamo_keno_player_id','shamo_rocket_player_id','mh5_player_id','jetx_player_id','dragons_player_id'].forEach(function(k) {
-        localStorage.setItem(k, pid);
+  if (window.parent && window.parent !== window) {
+    var originalFetch = window.fetch;
+    window.fetch = function() {
+      var requestUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
+      return originalFetch.apply(this, arguments).then(function(response) {
+        if (requestUrl.indexOf('/api/') !== -1) {
+          setTimeout(function() {
+            window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, window.location.origin);
+          }, 120);
+        }
+        return response;
       });
-    }
-    var pname = params.get('displayName') || localStorage.getItem('litegames_player_name');
-    if (pname) {
-      ['litegames_player_name','shamo_keno_name','shamo_rocket_name','jetx_display_name'].forEach(function(k) {
-        localStorage.setItem(k, pname);
-      });
-    }
-    if (window.parent && window.parent !== window) {
-      var origFetch = window.fetch;
-      window.fetch = function() {
-        var reqUrl = typeof arguments[0] === 'string' ? arguments[0] : (arguments[0] && arguments[0].url || '');
-        return origFetch.apply(this, arguments).then(function(res) {
-          try {
-            var u = reqUrl;
-            if (u.indexOf('/api/') !== -1) {
-              setTimeout(function() {
-                window.parent.postMessage({ type: 'LITEGAMES_SYNC_WALLET' }, '*');
-              }, 120);
-            }
-          } catch(_) {}
-          return res;
-        });
-      };
-    } else {
-      window.addEventListener('DOMContentLoaded', function() {
-        var btn = document.createElement('a');
-        btn.href = '/';
-        btn.innerHTML = '&#8592; Lite Games';
-        btn.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
-        document.body.appendChild(btn);
-      });
-    }
-  } catch (e) {}
+    };
+  } else {
+    window.addEventListener('DOMContentLoaded', function() {
+      var back = document.createElement('a');
+      back.href = '/';
+      back.textContent = '← Lite Games';
+      back.style.cssText = 'position:fixed;bottom:14px;left:14px;z-index:99999;background:rgba(15,20,35,0.88);color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:6px 12px;border-radius:999px;font-family:sans-serif;font-size:12px;font-weight:700;text-decoration:none;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,0.45);';
+      document.body.appendChild(back);
+    });
+  }
 })();
 </script>
 
