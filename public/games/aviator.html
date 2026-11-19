@@ -2021,8 +2021,12 @@
     // ==========================================
     // 8. SOCKET.IO CONNECTION & EVENT HANDLERS
     // ==========================================
-    // No anonymous/localStorage identity is accepted. Firebase ID-token wiring is still pending.
-    const socket = null;
+    // The host auth layer may inject a short-lived Firebase ID token in memory.
+    // Never use localStorage IDs, Telegram initDataUnsafe, or caller-supplied player IDs as auth.
+    const firebaseIdToken = String(window.liteGamesFirebaseIdToken || '');
+    const socket = typeof io === 'function' && firebaseIdToken
+      ? io('/aviator', { auth: { idToken: firebaseIdToken } })
+      : null;
 
     if (socket) {
       socket.on('connect', () => {
