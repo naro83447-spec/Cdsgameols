@@ -357,7 +357,7 @@
             </div>
             <div class="flex items-center space-x-2">
                 <div class="flex items-center space-x-1.5 bg-[#182035] border border-gray-700/70 rounded-full px-2.5 py-1">
-                    <span id="frame-balance-text" class="text-xs font-semibold text-cyan-300">1,000.00 ETB</span>
+                    <span id="frame-balance-text" class="text-xs font-semibold text-cyan-300">0.00 ETB</span>
                 </div>
                 <button onclick="openDepositModal()" class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow">
                     <i class="fa-solid fa-plus text-[10px]"></i>
@@ -440,19 +440,32 @@
             if (frameEl) frameEl.innerText = formatMoney(currentBalance);
         }
 
+        async function getFirebaseIdToken() {
+            const auth = window.liteGamesFirebaseAuth || window.firebaseAuth || null;
+            const user = auth && auth.currentUser;
+            if (!user || typeof user.getIdToken !== 'function') {
+                throw new Error('Firebase sign-in required.');
+            }
+            return user.getIdToken();
+        }
+
         async function refreshBalance(showToast = false) {
             const pill = document.getElementById('balance-pill');
             if (pill) pill.classList.add('animate-pulse');
             try {
-                const res = await fetch(`/api/wallet/state?playerId=${encodeURIComponent(PLAYER_ID)}&displayName=${encodeURIComponent(playerDisplayName)}`);
+                const token = await getFirebaseIdToken();
+                const res = await fetch('/api/wallet/state', {
+                    headers: { Authorization: 'Bearer ' + token }
+                });
                 const data = await res.json();
-                if (data.status === 'success') {
-                    currentBalance = Number(data.balance || 0);
-                    updateBalanceUI();
-                    if (showToast) showNotification('ሒሳብዎ ተዘምኗል!');
-                }
-            } catch (_) {
-                if (showToast) showNotification('ግንኙነት በመሞከር ላይ...');
+                if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Wallet unavailable.');
+                currentBalance = Number(data.balance || 0);
+                updateBalanceUI();
+                if (showToast) showNotification('ሒሳብዎ ተዘምኗል!');
+            } catch (error) {
+                currentBalance = 0;
+                updateBalanceUI();
+                if (showToast) showNotification(error.message || 'Firebase sign-in ያስፈልጋል።');
             } finally {
                 if (pill) setTimeout(() => pill.classList.remove('animate-pulse'), 350);
             }
@@ -596,23 +609,13 @@
                 <div class="w-12 h-12 bg-cyan-500/20 text-cyan-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
                     <i class="fa-solid fa-wallet"></i>
                 </div>
-                <h3 class="font-bold text-white text-base mb-1">ገንዘብ ያስገቡ</h3>
-                <p class="text-gray-400 text-xs mb-4">በቴሌብር (Telebirr) ወይም ባንክ አካውንት ሒሳብዎን ወዲያውኑ ይሙሉ</p>
-                <div class="grid grid-cols-4 gap-2 mb-3">
-                    <button onclick="document.getElementById('dep-amount').value=100" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">100</button>
-                    <button onclick="document.getElementById('dep-amount').value=500" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">500</button>
-                    <button onclick="document.getElementById('dep-amount').value=1000" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">1000</button>
-                    <button onclick="document.getElementById('dep-amount').value=5000" class="bg-[#0f1423] border border-gray-700 hover:border-cyan-500 text-xs text-white py-1.5 rounded-lg">5000</button>
-                </div>
+                <h3 class="font-bold text-white text-base mb-1">Telebirr ተቀማጭ ጥያቄ</h3>
+                <p class="text-gray-400 text-xs mb-4">ገንዘቡ በአድሚን እስኪፈቀድ ድረስ ወደ Wallet አይገባም።</p>
                 <div class="space-y-3 text-left">
-                    <select id="dep-method" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
-                        <option value="Telebirr">Telebirr (ቴሌብር)</option>
-                        <option value="CBE Birr">CBE Birr (ሲቢኢ ብር)</option>
-                        <option value="M-Pesa">M-Pesa</option>
-                    </select>
-                    <input id="dep-amount" type="number" min="1" max="100000" value="500" placeholder="መጠን በ ETB (ምሳሌ: 500)" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500">
-                    <button onclick="submitDeposit()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-cyan-500/30 transition text-sm">
-                        ክፍያ ይፈጽሙ
+                    <input id="dep-amount" type="number" min="10" max="100000" step="0.01" value="100" placeholder="መጠን በ ETB" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500">
+                    <input id="dep-reference" type="text" maxlength="100" placeholder="የTelebirr ግብይት ማጣቀሻ ቁጥር" class="w-full bg-[#0f1423] border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500">
+                    <button onclick="submitDeposit()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold py-2.5 rounded-xl text-sm">
+                        የተቀማጭ ጥያቄ ላክ
                     </button>
                 </div>
             `;
@@ -621,28 +624,31 @@
 
         async function submitDeposit() {
             const amount = Number(document.getElementById('dep-amount')?.value || 0);
-            const method = document.getElementById('dep-method')?.value || 'Telebirr';
-            if (!amount || amount < 1) {
-                showNotification('ትክክለኛ መጠን ያስገቡ!');
+            const telebirrReference = String(document.getElementById('dep-reference')?.value || '').trim();
+            if (!Number.isFinite(amount) || amount < 10 || amount > 100000) {
+                showNotification('መጠኑ ከ10 እስከ 100,000 ETB መሆን አለበት።');
+                return;
+            }
+            if (telebirrReference.length < 5) {
+                showNotification('ትክክለኛ የTelebirr ግብይት ማጣቀሻ ቁጥር ያስገቡ።');
                 return;
             }
             try {
-                const res = await fetch('/api/wallet/deposit', {
+                const token = await getFirebaseIdToken();
+                const res = await fetch('/api/wallet/deposit-requests', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerId: PLAYER_ID, amount, method })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ amount, telebirrReference })
                 });
                 const data = await res.json();
-                if (data.status === 'success') {
-                    currentBalance = Number(data.balance);
-                    updateBalanceUI();
-                    closeModal();
-                    showNotification(`${data.added} ETB ወደ ሒሳብዎ ገብቷል!`);
-                } else {
-                    showNotification(data.message || 'ክፍያው አልተሳካም');
-                }
-            } catch (_) {
-                showNotification('የኔትወርክ ችግር አጋጥሟል');
+                if (!res.ok || data.status !== 'success') throw new Error(data.message || 'የተቀማጭ ጥያቄው አልተሳካም።');
+                closeModal();
+                showNotification('ጥያቄዎ PENDING ሆኗል። አድሚን እስኪያጸድቀው ድረስ ቀሪ ሂሳብዎ አይቀየርም።');
+            } catch (error) {
+                showNotification(error.message || 'Firebase sign-in ያስፈልጋል።');
             }
         }
 
