@@ -2023,7 +2023,10 @@
     // ==========================================
     // The host auth layer may inject a short-lived Firebase ID token in memory.
     // Never use localStorage IDs, Telegram initDataUnsafe, or caller-supplied player IDs as auth.
-    const firebaseIdToken = String(window.liteGamesFirebaseIdToken || '');
+    let firebaseIdToken = String(window.liteGamesFirebaseIdToken || '');
+    if (!firebaseIdToken && window.parent && window.parent !== window) {
+      try { firebaseIdToken = String(window.parent.liteGamesFirebaseIdToken || ''); } catch (_) {}
+    }
     const socket = typeof io === 'function' && firebaseIdToken
       ? io('/aviator', { auth: { idToken: firebaseIdToken } })
       : null;
