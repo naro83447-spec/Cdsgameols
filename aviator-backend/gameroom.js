@@ -1,4 +1,4 @@
-const { AviatorBalanceManager, roundMoney } = require('./balance');
+const { AviatorBalanceManager } = require('./balance');
 const { AviatorEngine, PHASES } = require('./engine');
 
 class AviatorGameRoom {
@@ -139,13 +139,10 @@ class AviatorGameRoom {
         }
       }
 
-      // Update global history & previous round snapshot
-      this.history.unshift(data.crashPoint);
-      if (this.history.length > 42) this.history.length = 42;
-
-      const feed = round.getFeedRows();
-      this.previousRoundResult = data.crashPoint;
-      this.previousRoundRows = feed.rows;
+      // Do not expose in-memory rounds as historical records; persistence is not implemented yet.
+      this.history = [];
+      this.previousRoundResult = null;
+      this.previousRoundRows = [];
 
       for (const pid of affectedPlayers) {
         this._emitToPlayer(pid, 'player:sync', {
