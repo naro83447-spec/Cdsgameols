@@ -20,7 +20,7 @@
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       window.liteGamesFirebaseAuth = firebase.auth();
       // Keep Firebase auth in this page's memory only; sign in again after a full reload.
-      window.liteGamesFirebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(console.error);
+      window.liteGamesFirebaseReady = window.liteGamesFirebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -473,6 +473,7 @@
         }
 
         async function signInLiteGames() {
+            await window.liteGamesFirebaseReady;
             const email = document.getElementById('auth-email')?.value?.trim();
             const password = document.getElementById('auth-password')?.value || '';
             try {
@@ -483,6 +484,7 @@
         }
 
         async function registerLiteGames() {
+            await window.liteGamesFirebaseReady;
             const email = document.getElementById('auth-email')?.value?.trim();
             const password = document.getElementById('auth-password')?.value || '';
             try {
