@@ -851,6 +851,18 @@
             applyCustomLogos();
             syncFavoriteStars();
             refreshBalance(false);
+            const auth = window.liteGamesFirebaseAuth || window.firebaseAuth || null;
+            if (auth && typeof auth.onAuthStateChanged === 'function') {
+                auth.onAuthStateChanged((user) => {
+                    if (!user) {
+                        window.liteGamesFirebaseIdToken = '';
+                        currentBalance = 0;
+                        updateBalanceUI();
+                        return;
+                    }
+                    refreshBalance(false);
+                });
+            }
             loadWinners();
         });
     </script>
