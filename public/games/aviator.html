@@ -164,6 +164,12 @@
   </style>
 </head>
 <body class="bg-[#0e0f11] text-white flex justify-center min-h-screen">
+  <div class="mx-auto max-w-3xl px-3 pt-3">
+    <div class="rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-center text-xs text-amber-200">
+      Aviator is temporarily unavailable. Firebase sign-in and Firestore wallet settlement must be completed and tested before wagering is enabled. Demo top-ups have been removed.
+    </div>
+  </div>
+
 
   <div id="app" class="w-full max-w-[480px] bg-[#0e0f11] flex flex-col min-h-screen relative shadow-2xl border-x border-[#1c1d20]">
 
@@ -1362,7 +1368,7 @@
       // 1. Place bet or queue for next round
       if (p.status === 'IDLE' && !p.queuedNext) {
         if (!socket || !socket.connected) {
-          showToast('Connecting to Aviator server...');
+          showToast('Aviator is disabled until Firebase sign-in and secure Firestore wallet settlement are ready.');
           return;
         }
         socket.emit('bet:place', {
