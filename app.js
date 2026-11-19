@@ -16,7 +16,8 @@ function startPlatformServer(port = Number(process.env.PORT || 3000)) {
   const app = express();
   const httpServer = http.createServer(app);
 
-  app.use(cors());
+  const allowedOrigins = String(process.env.CORS_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean);
+  app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : false }));
   app.use(express.json({ limit: '2mb' }));
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'lite-games-platform' }));
